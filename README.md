@@ -56,3 +56,17 @@ Pour activer le commerce : ajouter un contexte panier et son interface ; relier 
 Publier le dossier `dist/` sur un hébergement statique avec fallback SPA vers `index.html`, nécessaire pour ouvrir directement `/catalogue`, `/catalogue/:slug` et `/contact`. Les routes `/api/*` doivent être servies par le backend, sans fallback HTML. Le fichier `public/_redirects` fournit le fallback pour les hébergeurs compatibles.
 
 Alegreya et Manrope sont chargées via Google Fonts ; des polices système prennent le relais hors connexion. Pour une production sans dépendance à Google Fonts, héberger les fichiers WOFF2 incluant le cyrillique et mettre à jour les déclarations de polices.
+
+## GitHub Pages
+
+Un workflow `.github/workflows/deploy-pages.yml` compile et publie `dist/` à chaque push sur `main` (ou manuellement depuis Actions).
+
+1. Dans le dépôt GitHub, ouvrir **Settings → Pages → Build and deployment → Source → GitHub Actions**.
+2. Committer et pousser les modifications sur `main`.
+3. Attendre la réussite du workflow **Deploy to GitHub Pages**.
+
+URL prévue : https://gregboil.github.io/Meiro_site/
+
+`npm run build:pages` utilise `/Meiro_site/` et le routage par hash, par exemple `/Meiro_site/#/catalogue`. Cela permet les accès directs et le rafraîchissement sans réécriture serveur. Le workflow utilise le chemin fourni par GitHub pour prendre aussi en charge un domaine personnalisé. Le build standard et le développement local conservent les URL habituelles. Les liens de défilement internes ne modifient pas le hash de navigation.
+
+GitHub Pages héberge seulement le frontend. Le formulaire et QPay nécessiteront un backend séparé ; si le formulaire est activé via une URL externe, ce backend doit autoriser l'origine du site avec CORS.

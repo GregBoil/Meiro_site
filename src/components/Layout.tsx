@@ -28,12 +28,25 @@ export default function Layout() {
 
   return (
     <>
-      <a href="#main" className="skip-link">
+      <a
+        href="#main"
+        className="skip-link"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main")?.focus();
+          document.getElementById("main")?.scrollIntoView();
+        }}
+      >
         Үндсэн агуулга руу
       </a>
       <header className="site-header">
         <Link to="/" className="logo-link" aria-label="Meiro — Нүүр">
-          <img src="/meiro-logo.svg" alt="Meiro" width="96" height="72" />
+          <img
+            src={`${import.meta.env.BASE_URL}meiro-logo.svg`}
+            alt="Meiro"
+            width="96"
+            height="72"
+          />
         </Link>
         <nav className="desktop-nav" aria-label="Үндсэн цэс">
           {navigation.map((item) => (
@@ -70,7 +83,7 @@ export default function Layout() {
           </nav>
         )}
       </header>
-      <main id="main">
+      <main id="main" tabIndex={-1}>
         <Outlet />
       </main>
       <footer className="site-footer">

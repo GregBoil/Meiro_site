@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Catalogue from "./pages/Catalogue";
@@ -9,9 +9,12 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import "./styles.css";
 
+const Router =
+  import.meta.env.MODE === "github-pages" ? HashRouter : BrowserRouter;
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home />} />
@@ -21,6 +24,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>,
 );

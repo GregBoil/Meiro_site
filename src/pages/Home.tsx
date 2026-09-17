@@ -25,7 +25,14 @@ export default function Home() {
           <Link className="button button-primary" to="/catalogue">
             Бүтээлүүдтэй танилцах <ArrowUpRight size={19} />
           </Link>
-          <a className="hero-scroll" href="#our-story">
+          <a
+            className="hero-scroll"
+            href="#our-story"
+            onClick={(event) => {
+              event.preventDefault();
+              document.getElementById("our-story")?.scrollIntoView();
+            }}
+          >
             <span className="circle-arrow">
               <ArrowDown size={17} />
             </span>{" "}
@@ -35,7 +42,7 @@ export default function Home() {
         <div className="hero-visual">
           <div className="hero-image">
             <img
-              src="/image_hero.png"
+              src={`${import.meta.env.BASE_URL}image_hero.png`}
               alt="Meiro-гийн урлаач ажлын ширээн дээр арьсыг нямбай зүсэж буй нь."
               fetchPriority="high"
               decoding="async"

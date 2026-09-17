@@ -27,7 +27,10 @@ test("all public page templates render with real routes and honest preview state
     packages: "external",
     jsx: "automatic",
     write: false,
-    define: { "import.meta.env.VITE_CONTACT_ENDPOINT": '""' },
+    define: {
+      "import.meta.env.VITE_CONTACT_ENDPOINT": '""',
+      "import.meta.env.BASE_URL": '"/Meiro_site/"',
+    },
   });
   const bundlePath = path.resolve(`.page-test-${process.pid}.mjs`);
   await writeFile(bundlePath, output.outputFiles[0].text);
@@ -67,6 +70,12 @@ test("all public page templates render with real routes and honest preview state
         markup.includes(expected),
         `${name} renders its expected content`,
       );
+      if (name === "Home") {
+        assert.ok(
+          markup.includes('src="/Meiro_site/image_hero.png"'),
+          "hero image respects the deployment base",
+        );
+      }
       if (path.includes("category=bags")) {
         assert.ok(
           !markup.includes("Картны гэр"),
