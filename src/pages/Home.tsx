@@ -25,6 +25,7 @@ export default function Home() {
           <Link className="button button-primary" to="/catalogue">
             Бүтээлүүдтэй танилцах <ArrowUpRight size={19} />
           </Link>
+          {/*}
           <a
             className="hero-scroll"
             href="#our-story"
@@ -37,7 +38,7 @@ export default function Home() {
               <ArrowDown size={17} />
             </span>{" "}
             Бидний түүхийг нээх
-          </a>
+          </a>*/}
         </div>
         <div className="hero-visual">
           <div className="hero-image">
@@ -135,25 +136,30 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <div className="collection-intro page-shell">
-        <p className="eyebrow">03 / MEIRO-ГИЙН ЕРТӨНЦ</p>
-        <h2>
-          Дэлгэрэнгүйг нь хар.
-          <br />
-          <em>Өөрийнхийгөө ол.</em>
-        </h2>
-        <p>
-          Хэлбэр, өнгө, мэдрэмж.
-          <br />
-          Бүтээл бүрийг арай ойроос.
-        </p>
-      </div>
-      <Carousel />
-      <section className="catalogue-cta page-shell">
-        <p>Таны замд хамт байх бүтээл.</p>
-        <Link className="button button-primary" to="/catalogue">
-          Бүх бүтээлийг үзэх <ArrowUpRight size={19} />
-        </Link>
+      <section
+        className="collection-section"
+        aria-labelledby="collection-title"
+      >
+        <div className="collection-intro page-shell">
+          <p className="eyebrow">03 / MEIRO-ГИЙН ЕРТӨНЦ</p>
+          <h2 id="collection-title">
+            Дэлгэрэнгүйг нь хар.
+            <br />
+            <em>Өөрийнхийгөө ол.</em>
+          </h2>
+          <p>
+            Хэлбэр, өнгө, мэдрэмж.
+            <br />
+            Бүтээл бүрийг арай ойроос.
+          </p>
+        </div>
+        <Carousel />
+        <div className="catalogue-cta page-shell">
+          <p>Таны замд хамт байх бүтээл.</p>
+          <Link className="button button-primary" to="/catalogue">
+            Бүх бүтээлийг үзэх <ArrowUpRight size={19} />
+          </Link>
+        </div>
       </section>
     </>
   );

@@ -50,15 +50,11 @@ export default function Layout() {
         </Link>
         <nav className="desktop-nav" aria-label="Үндсэн цэс">
           {navigation.map((item) => (
-            <NavLink key={item.to} to={item.to} end>
+            <NavLink key={item.to} to={item.to} end={item.to === "/"}>
               {item.label}
             </NavLink>
           ))}
         </nav>
-        <span className="header-note">
-          <span className="status-dot" />
-          Монголд урлав
-        </span>
         <button
           className="icon-button menu-toggle"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -75,7 +71,12 @@ export default function Layout() {
             aria-label="Гар утасны цэс"
           >
             {navigation.map((item) => (
-              <NavLink key={item.to} to={item.to} end>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                onClick={() => setMenuOpen(false)}
+              >
                 {item.label}
                 <ArrowUpRight size={22} />
               </NavLink>

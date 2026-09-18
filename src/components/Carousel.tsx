@@ -72,7 +72,11 @@ export default function Carousel() {
   }
 
   return (
-    <section className="collection-section" aria-label="Бүтээлүүдийн ертөнц">
+    <div
+      className="collection-carousel"
+      role="group"
+      aria-label="Бүтээлүүдийн ертөнц"
+    >
       <div className="collection-heading">
         <p className="eyebrow">ОЙРООС ХАРВАЛ</p>
         <div className="carousel-controls">
@@ -153,6 +157,6 @@ export default function Carousel() {
           </figure>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
