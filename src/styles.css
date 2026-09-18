@@ -279,7 +279,6 @@ p {
 .hero-image {
   position: relative;
   overflow: hidden;
-  border-radius: 20px;
   background: var(--paper);
   aspect-ratio: 1.035;
   min-height: 420px;
@@ -291,22 +290,6 @@ p {
   height: 100%;
   object-fit: cover;
   object-position: 52% center;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 4%,
-    #000 96%,
-    transparent
-  ), linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 4%,
-    #000 96%,
-    transparent
-  ), linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent);
-  mask-composite: intersect;
 }
 .placeholder-copy {
   text-align: center;
@@ -457,8 +440,19 @@ p {
 .craft-visual {
   padding: 58px 0 58px 12.5%;
 }
-.craft-visual .image-placeholder {
+.craft-visual .craft-image {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
   aspect-ratio: 1.08;
+}
+.craft-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 .tone-sage {
   background: #738a6e;
@@ -491,9 +485,12 @@ p {
   color: var(--taupe);
 }
 .craft-copy > p:not(.eyebrow) {
-  font-size: 11px;
-  color: var(--taupe);
+  font-size: 14px;
+  color: var(--ink);
   max-width: 370px;
+}
+.craft-copy > p:not(.eyebrow) strong {
+  color: var(--taupe);
 }
 .craft-facts {
   margin-top: 32px;
@@ -502,7 +499,8 @@ p {
   display: flex;
   gap: 22px;
   flex-wrap: wrap;
-  font-size: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 .craft-facts span {
   color: var(--taupe);
@@ -537,7 +535,7 @@ p {
 }
 .collection-intro > p:last-child {
   justify-self: end;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink);
   padding-bottom: 8px;
 }
@@ -1031,7 +1029,7 @@ p {
     padding-bottom: 40px;
     display: flex;
   }
-  .craft-visual .image-placeholder {
+  .craft-visual .craft-image {
     width: 100%;
   }
   .craft-facts {
@@ -1223,7 +1221,7 @@ p {
   .craft-visual {
     padding: 27px 6% 0;
   }
-  .craft-visual .image-placeholder {
+  .craft-visual .craft-image {
     aspect-ratio: 1.3;
   }
   .craft-copy {

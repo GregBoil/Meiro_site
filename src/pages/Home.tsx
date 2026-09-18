@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
-import ImagePlaceholder from "../components/ImagePlaceholder";
 import Carousel from "../components/Carousel";
 
 export default function Home() {
@@ -103,11 +102,16 @@ export default function Home() {
       </section>
       <section className="craft-section">
         <div className="craft-visual">
-          <ImagePlaceholder
-            tone="sage"
-            description="Урлаачийн гар арьсны ирмэгийг нямбай боловсруулж буй ойрын зураг. Материалын өнгө, гарын хөдөлгөөн тод харагдана."
-            number="02"
-          />
+          <div className="craft-image">
+            <img
+              src={`${import.meta.env.BASE_URL}material-study.jpg`}
+              alt="Цайвар ширээн дээр дэлгэсэн бор, тауп өнгийн арьсны байгалийн ширхэг."
+              loading="lazy"
+              decoding="async"
+              width="1536"
+              height="1024"
+            />
+          </div>
         </div>
         <div className="craft-copy">
           <p className="eyebrow">02 / МАТЕРИАЛ БА УР ХИЙЦ</p>
@@ -119,7 +123,7 @@ export default function Home() {
             <em>Таны түүх.</em>
           </h2>
           <p>
-            Бид чанартай итали арьсыг сонгож, Монголдоо гараар урладаг. Энгийн
+            Бид чанартай <strong>итали арьсыг</strong> сонгож, Монголдоо <strong>гараар урладаг</strong>. Энгийн
             атлаа өөрийн гэсэн төрхтэй, өдөр тутам хэрэглэхэд эвтэйхэн бүтээл
             хийхийг зорьдог.
           </p>
