@@ -151,11 +151,13 @@ export default function Home() {
             <br />
             <em>Өөрийнхийгөө ол.</em>
           </h2>
+          {/*
           <p>
             Хэлбэр, өнгө, мэдрэмж.
             <br />
             Бүтээл бүрийг арай ойроос.
           </p>
+          */}
         </div>
         <Carousel />
         <div className="catalogue-cta page-shell">
