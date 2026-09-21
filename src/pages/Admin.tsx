@@ -10,6 +10,7 @@ export default function Admin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
@@ -41,7 +42,7 @@ export default function Admin() {
   if (!session) return <main className="admin-login"><form className="admin-login-card" onSubmit={signIn}><p className="admin-kicker">MEIRO / ADMIN</p><h1>Нэвтрэх</h1><label>И-мэйл<input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} required /></label><label>Нууц үг<input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} required /></label>{error&&<p className="admin-error">{error}</p>}<button type="submit">Нэвтрэх</button></form></main>;
   if (!authorized) return <main className="admin-login"><div className="admin-login-card"><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хандах эрхгүй</h1><p>Энэ хэрэглэгч админы эрхгүй байна.</p><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></div></main>;
 
-  return <div className="admin-shell"><aside className="admin-sidebar"><strong>MEIRO</strong><span>ADMIN</span><nav>
+  return <div className={`admin-shell ${menuOpen?"menu-open":""}`}><header className="admin-mobile-bar"><div><strong>MEIRO</strong><span>ADMIN</span></div><button type="button" aria-label="Цэс" aria-expanded={menuOpen} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?"×":"☰"}</button></header>{menuOpen&&<button className="admin-menu-backdrop" aria-label="Цэс хаах" onClick={()=>setMenuOpen(false)}/>}<aside className="admin-sidebar"><strong>MEIRO</strong><span>ADMIN</span><nav onClick={()=>setMenuOpen(false)}>
     <NavLink end to="/admin">Хянах самбар</NavLink><NavLink to="/admin/products">Бүтээгдэхүүн</NavLink>
     <NavLink to="/admin/inventory">Нөөц</NavLink><NavLink to="/admin/media">Медиа</NavLink><NavLink to="/admin/collections">Цуглуулга</NavLink><NavLink to="/admin/home">Нүүр хуудас</NavLink><span>Тохиргоо</span>
   </nav><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></aside><Outlet /></div>;
