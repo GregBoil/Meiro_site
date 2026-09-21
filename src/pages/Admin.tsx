@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../services/supabase";
 
@@ -48,5 +48,32 @@ export default function Admin() {
 }
 
 export function AdminDashboard() {
-  return <main className="admin-content"><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хянах самбар</h1><p>Meiro-ийн бүтээгдэхүүн, нөөц болон контентыг эндээс удирдана.</p><div className="admin-cards"><article><span>Бүтээгдэхүүн</span><strong>Удахгүй</strong></article><article><span>Нөөц</span><strong>Удахгүй</strong></article><article><span>Медиа</span><strong>Удахгүй</strong></article></div></main>;
+  const [stats,setStats]=useState({products:0,drafts:0,low:0,out:0,unused:0,collections:0});
+  useEffect(()=>{if(!supabase)return;Promise.all([
+    supabase.from("products").select("status"),
+    supabase.from("variant_availability").select("*"),
+    supabase.from("media").select("id,product_images(id)"),
+    supabase.from("collections").select("id",{count:"exact",head:true}).eq("active",true)
+  ]).then(([p,v,m,col])=>{
+    const products=(p.data??[]) as any[], availability=(v.data??[]) as any[], media=(m.data??[]) as any[];
+    const qty=(x:any)=>Number(x.quantity_available??x.available_quantity??(Number(x.quantity_on_hand??0)-Number(x.quantity_reserved??0)));
+    setStats({
+      products:products.length,
+      drafts:products.filter(x=>x.status==="draft").length,
+      out:availability.filter(x=>x.track_inventory!==false&&qty(x)<=0).length,
+      low:availability.filter(x=>x.track_inventory!==false&&qty(x)>0&&qty(x)<=Number(x.low_stock_threshold??2)).length,
+      unused:media.filter(x=>!x.product_images?.length).length,
+      collections:col.count??0
+    })
+  })},[]);
+  const cards=[
+    {label:"Бүтээгдэхүүн",value:stats.products,note:`${stats.drafts} ноорог`,to:"/admin/products"},
+    {label:"Нөөц дууссан",value:stats.out,note:`${stats.low} цөөн үлдсэн`,to:"/admin/inventory"},
+    {label:"Ашиглагдаагүй медиа",value:stats.unused,note:"Цэвэрлэх боломжтой",to:"/admin/media"},
+    {label:"Идэвхтэй цуглуулга",value:stats.collections,note:"Каталогт харагдана",to:"/admin/collections"}
+  ];
+  return <main className="admin-content"><div className="admin-page-head"><div><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хянах самбар</h1><p>Дэлгүүрийн одоогийн төлөвийг нэг дороос харна.</p></div></div>
+    <div className="admin-dashboard-grid">{cards.map(x=><Link to={x.to} key={x.label} className="admin-dashboard-card"><span>{x.label}</span><strong>{x.value}</strong><small>{x.note}</small></Link>)}</div>
+    <section className="admin-panel admin-dashboard-actions"><h2>Шуурхай үйлдэл</h2><div><Link to="/admin/products/new">+ Шинэ бүтээгдэхүүн</Link><Link to="/admin/inventory">Нөөц шалгах</Link><Link to="/admin/home">Нүүр хуудасны зураг</Link><Link to="/admin/media">Медиа сан</Link></div></section>
+  </main>;
 }
