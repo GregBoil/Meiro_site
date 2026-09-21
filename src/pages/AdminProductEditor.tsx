@@ -46,7 +46,7 @@ export default function AdminProductEditor(){
    const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");return null}
    const payload={...form,status:"draft" as const,slug:generatedSlug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    const {data,error}=await supabase.from("products").insert(payload).select("id").single();
-   if(error||!data){setError(error?.message||"Ноорог үүсгэж чадсангүй.");return null}
+   if(error||!data){showError(productErrorMessage(error));return null}
    setProductId(data.id);setForm(x=>({...x,slug:generatedSlug,status:"draft"}));nav("/admin/products/"+data.id,{replace:true});return data.id;
  }
  async function uploadImage(file:File){
@@ -89,10 +89,16 @@ export default function AdminProductEditor(){
    nav("/admin/products",{replace:true});
  }
  function publicationProblems(){const live=variants.filter(v=>!v._deleted&&v.active);const problems:string[]=[];if(!form.category_id)problems.push("ангилал");if(images.length===0)problems.push("зураг");if(live.length===0)problems.push("идэвхтэй хувилбар");if(live.some(v=>Number(v.price)<=0))problems.push("үнэ");return problems}
+ function showError(message:string){setError(message);setSaved(false);requestAnimationFrame(()=>topRef.current?.scrollIntoView({behavior:"smooth",block:"start"}))}
+ function productErrorMessage(error:any){
+   if(error?.code==="23505"&&(String(error?.message||"").includes("internal_reference")||String(error?.details||"").includes("internal_reference")))return `“${form.internal_reference}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`;
+   if(error?.code==="23505"&&String(error?.message||"").includes("slug"))return `“${form.internal_reference}” кодоос үүссэн хаяг аль хэдийн ашиглагдаж байна. Өөр дотоод код оруулна уу.`;
+   return error?.message||"Бүтээгдэхүүнийг хадгалж чадсангүй.";
+ }
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
    const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
-   if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
-   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}}
+   if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)showError(productErrorMessage(error));else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
+   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)showError(productErrorMessage(error));else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}}
    setSaving(false);
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
