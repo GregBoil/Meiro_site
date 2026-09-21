@@ -3,17 +3,19 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 type Category={id:string;name:string};
+type Variant={id?:string;name:string;color:string;sku:string;price:number;active:boolean;made_to_order:boolean;lead_time_days:number|null;display_order:number;_deleted?:boolean};
 type Form={name:string;slug:string;internal_reference:string;short_description:string;description:string;material:string;dimensions:string;category_id:string;status:"draft"|"published"|"hidden";featured:boolean;custom_order_available:boolean;custom_order_note:string;display_order:number};
 const empty:Form={name:"",slug:"",internal_reference:"",short_description:"",description:"",material:"",dimensions:"",category_id:"",status:"draft",featured:false,custom_order_available:false,custom_order_note:"",display_order:0};
 const slugify=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate();
- const [form,setForm]=useState<Form>(empty); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+ const [form,setForm]=useState<Form>(empty); const [variants,setVariants]=useState<Variant[]>([]); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
  useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
    if(!creating){const {data,error}=await supabase.from("products").select("name,slug,internal_reference,short_description,description,material,dimensions,category_id,status,featured,custom_order_available,custom_order_note,display_order").eq("id",id!).single();
-     if(error)setError(error.message); else setForm({...empty,...data} as Form); setLoading(false);}
+     if(error)setError(error.message); else setForm({...empty,...data} as Form);
+     const {data:v,error:ve}=await supabase.from("product_variants").select("id,name,color,sku,price,active,made_to_order,lead_time_days,display_order").eq("product_id",id!).order("display_order"); if(ve)setError(ve.message); else setVariants((v??[]) as Variant[]); setLoading(false);}
  })()},[id,creating]);
  const set=<K extends keyof Form>(k:K,v:Form[K])=>setForm(x=>({...x,[k]:v}));
  async function addCategory(){
@@ -24,10 +26,21 @@ export default function AdminProductEditor(){
    if(error)setError(error.message); else if(data){setCategories(x=>[...x,data as Category]);set("category_id",data.id);setNewCategory("");}
    setAddingCategory(false);
  }
+ function addVariant(){const n=variants.filter(v=>!v._deleted).length+1;setVariants(v=>[...v,{name:"",color:"",sku:form.internal_reference?form.internal_reference+"-"+n:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:n-1}])}
+ function updateVariant(i:number,patch:Partial<Variant>){setVariants(v=>v.map((x,j)=>j===i?{...x,...patch}:x))}
+ function removeVariant(i:number){setVariants(v=>v.map((x,j)=>j===i?{...x,_deleted:true}:x))}
+ async function saveVariants(productId:string){
+   if(!supabase)return null;
+   for(const v of variants){
+     if(v._deleted){if(v.id){const {error}=await supabase.from("product_variants").delete().eq("id",v.id);if(error)return error}continue}
+     const payload={product_id:productId,name:v.name.trim()||v.color.trim()||"Хувилбар",color:v.color.trim()||null,sku:v.sku.trim(),price:Number(v.price)||0,active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
+     const q=v.id?supabase.from("product_variants").update(payload).eq("id",v.id):supabase.from("product_variants").insert(payload); const {error}=await q;if(error)return error;
+   } return null;
+ }
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setSaving(true);setError("");setSaved(false);
    const payload={...form,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
-   if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data)nav("/admin/products/"+data.id,{replace:true});}
-   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else setSaved(true);}
+   if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
+   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else setSaved(true);}}
    setSaving(false);
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
