@@ -1595,3 +1595,8 @@ p {
  .admin-mobile-bar{width:100%;box-sizing:border-box}
  .admin-content{width:100%;min-width:0;box-sizing:border-box;padding:36px 22px}
 }
+
+/* Strong admin feedback messages */
+.admin-message{padding:13px 15px;border-radius:2px;font-weight:600}
+.admin-error.admin-message{color:#8f2f24;background:#fff0ed;border:1px solid #d99084}
+.admin-success.admin-message{color:#315f3a;background:#edf7ef;border:1px solid #a9cfaf}
