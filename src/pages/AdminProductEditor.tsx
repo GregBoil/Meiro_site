@@ -11,7 +11,7 @@ const slugify=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u03
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate();
- const [form,setForm]=useState<Form>(empty); const [variants,setVariants]=useState<Variant[]>([]); const [images,setImages]=useState<ProductImage[]>([]); const [uploading,setUploading]=useState(false); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+ const [form,setForm]=useState<Form>(empty); const [variants,setVariants]=useState<Variant[]>([]); const [images,setImages]=useState<ProductImage[]>([]); const [uploading,setUploading]=useState(false); const [draggedImageId,setDraggedImageId]=useState<string|null>(null); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
  useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
    if(!creating){const {data,error}=await supabase.from("products").select("name,slug,internal_reference,short_description,description,material,dimensions,category_id,status,featured,custom_order_available,custom_order_note,display_order").eq("id",id!).single();
@@ -52,6 +52,12 @@ export default function AdminProductEditor(){
  async function setImageVariant(image:ProductImage,variantId:string){
    if(!supabase)return; const value=variantId||null; const {error}=await supabase.from("product_images").update({variant_id:value}).eq("id",image.id); if(error)setError(error.message);else setImages(x=>x.map(i=>i.id===image.id?{...i,variant_id:value}:i));
  }
+ async function reorderImages(draggedId:string,targetId:string){
+   if(!supabase||draggedId===targetId)return;
+   const ordered=[...images].sort((a,b)=>a.display_order-b.display_order); const from=ordered.findIndex(i=>i.id===draggedId); const to=ordered.findIndex(i=>i.id===targetId); if(from<0||to<0)return;
+   const [moved]=ordered.splice(from,1);ordered.splice(to,0,moved); const next=ordered.map((img,index)=>({...img,display_order:index}));setImages(next);
+   for(const img of next){const {error}=await supabase.from("product_images").update({display_order:img.display_order}).eq("id",img.id);if(error){setError(error.message);return}}
+ }
  async function makePrimary(imageId:string){
    if(!supabase||!id)return; const current=images.find(i=>i.is_primary); if(current&&current.id!==imageId)await supabase.from("product_images").update({is_primary:false}).eq("id",current.id);
    const {error}=await supabase.from("product_images").update({is_primary:true}).eq("id",imageId); if(error)setError(error.message);else setImages(x=>x.map(i=>({...i,is_primary:i.id===imageId})));
@@ -87,8 +93,8 @@ export default function AdminProductEditor(){
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}
   </section>
   <section className="admin-panel admin-media-panel"><div className="admin-section-head"><div><h2>Зураг</h2><p>Бүтээгдэхүүн болон хувилбарын зургууд.</p></div>{!creating&&<label className="admin-upload-button">{uploading?"Оруулж байна…":"+ Зураг нэмэх"}<input type="file" accept="image/*" disabled={uploading} onChange={e=>{const file=e.target.files?.[0];if(file)uploadImage(file);e.currentTarget.value=""}}/></label>}</div>
-   {creating?<p className="admin-empty">Эхлээд бүтээгдэхүүнийг хадгална уу.</p>:images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{images.map(image=><div className="admin-image-card" key={image.id}>
-    {image.media&&<img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/>}
+   {creating?<p className="admin-empty">Эхлээд бүтээгдэхүүнийг хадгална уу.</p>:images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{[...images].sort((a,b)=>a.display_order-b.display_order).map(image=><div className={`admin-image-card ${draggedImageId===image.id?"is-dragging":""}`} key={image.id} draggable onDragStart={()=>setDraggedImageId(image.id)} onDragEnd={()=>setDraggedImageId(null)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(draggedImageId)reorderImages(draggedImageId,image.id);setDraggedImageId(null)}}>
+    {image.media&&<div className="admin-image-preview"><img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/><span className="admin-drag-hint">⋮⋮</span>{image.is_primary&&<span className="admin-primary-badge">Үндсэн зураг</span>}</div>}
     <div className="admin-image-card-body"><select value={image.variant_id||""} onChange={e=>setImageVariant(image,e.target.value)}><option value="">Бүх бүтээгдэхүүн</option>{variants.filter(v=>v.id&&!v._deleted).map(v=><option key={v.id} value={v.id}>{v.color||v.name||v.sku}</option>)}</select>
     <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Устгах</button></div></div>
    </div>)}</div>}
