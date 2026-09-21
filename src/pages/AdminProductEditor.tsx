@@ -9,13 +9,21 @@ const slugify=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u03
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate();
- const [form,setForm]=useState<Form>(empty); const [categories,setCategories]=useState<Category[]>([]); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+ const [form,setForm]=useState<Form>(empty); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
  useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
    if(!creating){const {data,error}=await supabase.from("products").select("name,slug,short_description,description,material,dimensions,category_id,status,featured,custom_order_available,custom_order_note,display_order").eq("id",id!).single();
      if(error)setError(error.message); else setForm({...empty,...data} as Form); setLoading(false);}
  })()},[id,creating]);
  const set=<K extends keyof Form>(k:K,v:Form[K])=>setForm(x=>({...x,[k]:v}));
+ async function addCategory(){
+   if(!supabase||!newCategory.trim())return;
+   setAddingCategory(true);setError("");
+   const name=newCategory.trim();
+   const {data,error}=await supabase.from("categories").insert({name,slug:slugify(name),active:true}).select("id,name").single();
+   if(error)setError(error.message); else if(data){setCategories(x=>[...x,data as Category]);set("category_id",data.id);setNewCategory("");}
+   setAddingCategory(false);
+ }
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setSaving(true);setError("");setSaved(false);
    const payload={...form,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data)nav("/admin/products/"+data.id,{replace:true});}
@@ -29,7 +37,7 @@ export default function AdminProductEditor(){
   <section className="admin-panel"><h2>Үндсэн мэдээлэл</h2><div className="admin-fields">
    <label className="wide">Нэр<input value={form.name} onChange={e=>{set("name",e.target.value);if(creating)set("slug",slugify(e.target.value))}} required /></label>
    <label>Slug<input value={form.slug} onChange={e=>set("slug",e.target.value)} required /></label>
-   <label>Ангилал<select value={form.category_id} onChange={e=>set("category_id",e.target.value)}><option value="">—</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+   <div className="admin-category-field"><label>Ангилал<select value={form.category_id} onChange={e=>set("category_id",e.target.value)}><option value="">—</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><div className="admin-inline-add"><input aria-label="Шинэ ангилал" placeholder="Шинэ ангилал…" value={newCategory} onChange={e=>setNewCategory(e.target.value)} /><button type="button" onClick={addCategory} disabled={addingCategory||!newCategory.trim()}>{addingCategory?"…":"+ Нэмэх"}</button></div></div>
    <label className="wide">Товч тайлбар<textarea value={form.short_description} onChange={e=>set("short_description",e.target.value)} rows={2}/></label>
    <label className="wide">Дэлгэрэнгүй тайлбар<textarea value={form.description} onChange={e=>set("description",e.target.value)} rows={5}/></label>
    <label>Материал<input value={form.material} onChange={e=>set("material",e.target.value)}/></label><label>Хэмжээ<input value={form.dimensions} onChange={e=>set("dimensions",e.target.value)}/></label>
