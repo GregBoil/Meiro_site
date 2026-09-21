@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import ImagePlaceholder from "./ImagePlaceholder";
+import { supabase } from "../services/supabase";
 
 const slides = [
   {
@@ -44,6 +45,15 @@ export default function Carousel() {
   );
   const [interacting, setInteracting] = useState(false);
   const [active, setActive] = useState(0);
+  const [mediaSlides, setMediaSlides] = useState<{id:string;url:string;alt:string}[]>([]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("homepage_carousel").select("id,display_order,media(storage_path,alt_text)").eq("active",true).order("display_order").then(({data,error})=>{
+      if(error){console.error(error);return}
+      setMediaSlides(((data??[]) as any[]).filter(x=>x.media?.storage_path).map(x=>({id:x.id,url:supabase!.storage.from("product-images").getPublicUrl(x.media.storage_path).data.publicUrl,alt:x.media.alt_text||"Meiro"})));
+    });
+  }, []);
 
   useEffect(() => {
     if (paused || interacting) return;
@@ -81,7 +91,7 @@ export default function Carousel() {
         <p className="eyebrow">ОЙРООС ХАРВАЛ</p>
         <div className="carousel-controls">
           <span className="slide-count">
-            0{active + 1} <span>/ 05</span>
+            0{active + 1} <span>/ {String(mediaSlides.length||slides.length).padStart(2,"0")}</span>
           </span>
           <button
             className="icon-button"
@@ -132,26 +142,22 @@ export default function Carousel() {
             element &&
             element.scrollLeft >= element.scrollWidth - element.clientWidth - 4
           ) {
-            setActive(slides.length - 1);
+            setActive((mediaSlides.length||slides.length) - 1);
             return;
           }
           setActive(
             Math.min(
-              slides.length - 1,
+              (mediaSlides.length||slides.length) - 1,
               Math.round((element?.scrollLeft ?? 0) / (width + 24)),
             ),
           );
         }}
       >
-        {slides.map((slide, index) => (
-          <figure key={slide.title}>
-            <ImagePlaceholder
-              description={slide.description}
-              tone={slide.tone}
-              number={`0${index + 1}`}
-            />
+        {(mediaSlides.length ? mediaSlides : slides).map((slide:any, index) => (
+          <figure key={slide.id||slide.title}>
+            {mediaSlides.length ? <img className="carousel-media-image" src={slide.url} alt={slide.alt}/> : <ImagePlaceholder description={slide.description} tone={slide.tone} number={`0${index + 1}`}/>}
             <figcaption>
-              <span>{slide.title}</span>
+              <span>{mediaSlides.length ? slide.alt : slide.title}</span>
               <span>0{index + 1}</span>
             </figcaption>
           </figure>
