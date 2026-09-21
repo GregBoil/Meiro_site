@@ -9,6 +9,7 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin, { AdminDashboard } from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
+import AdminProductEditor from "./pages/AdminProductEditor";
 import "./styles.css";
 
 const Router =
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="admin" element={<Admin />}>
           <Route index element={<AdminDashboard />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="products/:id" element={<AdminProductEditor />} />
         </Route>
         <Route element={<Layout />}>
           <Route index element={<Home />} />
