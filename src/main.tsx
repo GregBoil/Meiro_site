@@ -13,6 +13,7 @@ import AdminProductEditor from "./pages/AdminProductEditor";
 import AdminInventory from "./pages/AdminInventory";
 import AdminCollections from "./pages/AdminCollections";
 import AdminMedia from "./pages/AdminMedia";
+import AdminHome from "./pages/AdminHome";
 import "./styles.css";
 
 const Router =
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="inventory" element={<AdminInventory />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="media" element={<AdminMedia />} />
+          <Route path="home" element={<AdminHome />} />
         </Route>
         <Route element={<Layout />}>
           <Route index element={<Home />} />
