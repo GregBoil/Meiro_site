@@ -49,6 +49,7 @@ function getPublicImageUrl(storagePath: string | undefined) {
 
 function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>): Product {
   const variants = [...(row.product_variants ?? [])]
+    .filter((variant) => variant.active)
     .sort((a, b) => a.display_order - b.display_order)
     .map((variant) => ({
       id: variant.id,
@@ -125,7 +126,7 @@ export async function getPublishedProducts(): Promise<Product[]> {
   if (error) throw error;
 
   const variantIds = (rows ?? []).flatMap((row: any) =>
-    (row.product_variants ?? []).map((variant: VariantRow) => variant.id),
+    (row.product_variants ?? []).filter((variant: VariantRow) => variant.active).map((variant: VariantRow) => variant.id),
   );
 
   const availabilityMap = new Map<string, Availability>();
