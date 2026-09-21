@@ -71,6 +71,24 @@ export default function AdminProductEditor(){
    if(image.is_primary&&remaining.length){const next=[...remaining].sort((a,b)=>a.display_order-b.display_order)[0];await supabase.from("product_images").update({is_primary:true}).eq("id",next.id);setImages(x=>x.map(i=>({...i,is_primary:i.id===next.id})))}
  }
  function imageUrl(path:string){return supabase?.storage.from("product-images").getPublicUrl(path).data.publicUrl||""}
+ async function deleteProduct(){
+   if(!supabase||creating||!id)return;
+   if(!window.confirm(`“${form.name}” бүтээгдэхүүнийг бүр мөсөн устгах уу? Медиа сан дахь зургууд устахгүй.`))return;
+   setError("");setSaving(true);
+   const {data:vs,error:ve}=await supabase.from("product_variants").select("id").eq("product_id",id);
+   if(ve){setError(ve.message);setSaving(false);return}
+   const variantIds=(vs??[]).map(v=>v.id);
+   if(variantIds.length){
+     const {error:sm}=await supabase.from("stock_movements").delete().in("variant_id",variantIds);if(sm){setError(sm.message);setSaving(false);return}
+     const {error:inv}=await supabase.from("inventory").delete().in("variant_id",variantIds);if(inv){setError(inv.message);setSaving(false);return}
+   }
+   for(const table of ["product_images","product_collections"]){
+     const {error}=await supabase.from(table).delete().eq("product_id",id);if(error){setError(error.message);setSaving(false);return}
+   }
+   const {error:pv}=await supabase.from("product_variants").delete().eq("product_id",id);if(pv){setError(pv.message);setSaving(false);return}
+   const {error}=await supabase.from("products").delete().eq("id",id);if(error){setError(error.message);setSaving(false);return}
+   nav("/admin/products",{replace:true});
+ }
  function publicationProblems(){const live=variants.filter(v=>!v._deleted&&v.active);const problems:string[]=[];if(!form.category_id)problems.push("ангилал");if(images.length===0)problems.push("зураг");if(live.length===0)problems.push("идэвхтэй хувилбар");if(live.some(v=>Number(v.price)<=0))problems.push("үнэ");return problems}
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
    const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
@@ -104,6 +122,7 @@ export default function AdminProductEditor(){
     <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Хасах</button></div></div>
    </div>)}</div>}
   </section>
+  {!creating&&<section className="admin-panel admin-danger-zone"><div><h2>Аюултай бүс</h2><p>Бүтээгдэхүүн болон түүнтэй холбоотой хувилбар, нөөцийн мэдээллийг бүр мөсөн устгана. Медиа сан дахь зургууд хадгалагдана.</p></div><button type="button" onClick={deleteProduct} disabled={saving}>Бүтээгдэхүүн устгах</button></section>}
   <div className="admin-editor-bottom"><button form="product-form" type="submit" className="admin-primary" disabled={saving}>{saving?"Хадгалж байна…":"Хадгалах"}</button></div>
   <aside className="admin-editor-side"><section className="admin-panel"><h2>Нийтлэх</h2><label>Төлөв<select value={form.status} onChange={e=>set("status",e.target.value as Form["status"])}><option value="draft">Ноорог</option><option value="published">Нийтэлсэн</option><option value="hidden">Нуусан</option></select></label><label>Дараалал<input type="number" value={form.display_order} onChange={e=>set("display_order",Number(e.target.value))}/></label><label className="admin-check"><input type="checkbox" checked={form.featured} onChange={e=>set("featured",e.target.checked)}/> Онцлох бүтээгдэхүүн</label></section>
   <section className="admin-panel"><h2>Захиалгын өнгө</h2><label className="admin-check"><input type="checkbox" checked={form.custom_order_available} onChange={e=>set("custom_order_available",e.target.checked)}/> Өөр өнгөөр захиалах боломжтой</label>{form.custom_order_available&&<label>Тайлбар<textarea value={form.custom_order_note} onChange={e=>set("custom_order_note",e.target.value)} rows={3}/></label>}</section></aside>
