@@ -47,7 +47,7 @@ export default function AdminProductEditor(){
    const {data:m,error:me}=await supabase.from("media").insert({storage_path:path,filename:file.name,alt_text:form.name||file.name,mime_type:file.type||null,file_size:file.size}).select("id,storage_path,filename,alt_text").single();
    if(me||!m){await supabase.storage.from("product-images").remove([path]);setError(me?.message||"Зураг хадгалж чадсангүй.");setUploading(false);return}
    const {data:pi,error:pe}=await supabase.from("product_images").insert({product_id:id,media_id:m.id,is_primary:images.length===0,display_order:images.length}).select("id,variant_id,media_id,is_primary,display_order").single();
-   if(pe||!pi){setError(pe?.message||"Зураг холбож чадсангүй.");setUploading(false);return}
+   if(pe||!pi){await supabase.from("media").delete().eq("id",m.id);await supabase.storage.from("product-images").remove([path]);setError(pe?.message||"Зураг холбож чадсангүй.");setUploading(false);return}
    setImages(x=>[...x,{...pi,media:m} as ProductImage]);setUploading(false);
  }
  async function openLibrary(){if(!supabase)return;setError("");const {data,error}=await supabase.from("media").select("id,storage_path,filename,alt_text").order("created_at",{ascending:false});if(error)setError(error.message);else{setLibrary((data??[]) as any[]);setShowLibrary(true)}}
