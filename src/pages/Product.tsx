@@ -12,6 +12,7 @@ export default function Product() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +27,7 @@ export default function Product() {
       .then((item) => {
         if (cancelled) return;
         if (!item) setNotFound(true);
-        else { setProduct(item); setSelectedVariantId(item.variants[0]?.id ?? null); }
+        else { setProduct(item); setSelectedVariantId(item.variants[0]?.id ?? null); setSelectedImageId(item.images?.[0]?.id ?? null); }
       })
       .catch((error) => {
         console.error(error);
@@ -53,6 +54,10 @@ export default function Product() {
 
   const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0] ?? null;
   const shownPrice = selectedVariant?.priceMnt ?? product.priceMnt;
+  const generalImages = product.images.filter((image) => !image.variantId);
+  const variantImages = selectedVariant ? product.images.filter((image) => image.variantId === selectedVariant.id) : [];
+  const galleryImages = variantImages.length > 0 ? [...variantImages, ...generalImages] : generalImages.length > 0 ? generalImages : product.images;
+  const selectedImage = galleryImages.find((image) => image.id === selectedImageId) ?? galleryImages[0] ?? null;
   const availabilityLabel = selectedVariant?.availability === "sold_out" ? "Дууссан" : selectedVariant?.availability === "made_to_order" ? "Захиалгаар" : selectedVariant?.availability === "low_stock" ? "Цөөн үлдсэн" : "Бэлэн";
 
   return (
@@ -62,18 +67,18 @@ export default function Product() {
       </Link>
 
       <div className="product-detail">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.imageDescription}
-            className="product-image"
-          />
-        ) : (
-          <ImagePlaceholder
-            description={product.imageDescription}
-            tone={product.tone}
-          />
-        )}
+        <div className="product-gallery">
+          {selectedImage ? (
+            <img src={selectedImage.url} alt={selectedImage.alt} className="product-image" />
+          ) : product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.imageDescription} className="product-image" />
+          ) : (
+            <ImagePlaceholder description={product.imageDescription} tone={product.tone} />
+          )}
+          {galleryImages.length > 1 && <div className="product-thumbnails">
+            {galleryImages.map((image) => <button type="button" key={image.id} className={image.id===selectedImage?.id?"selected":""} onClick={()=>setSelectedImageId(image.id)}><img src={image.url} alt={image.alt}/></button>)}
+          </div>}
+        </div>
 
         <div className="product-detail-copy">
           <p className="eyebrow">MEIRO / БҮТЭЭЛ</p>
@@ -90,7 +95,7 @@ export default function Product() {
                     type="button"
                     key={variant.id}
                     className={variant.id === selectedVariant?.id ? "selected" : ""}
-                    onClick={() => setSelectedVariantId(variant.id)}
+                    onClick={() => { setSelectedVariantId(variant.id); const first = product.images.find((image) => image.variantId === variant.id) ?? product.images.find((image) => !image.variantId); setSelectedImageId(first?.id ?? null); }}
                   >
                     {variant.color || variant.name}
                   </button>
