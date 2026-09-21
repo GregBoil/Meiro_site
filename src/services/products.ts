@@ -13,6 +13,8 @@ type VariantRow = {
 };
 
 type ImageRow = {
+  id: string;
+  variant_id: string | null;
   is_primary: boolean;
   display_order: number;
   media: {
@@ -57,6 +59,18 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
       availability: availabilityMap.get(variant.id) ?? null,
     }));
 
+  const images = [...(row.product_images ?? [])]
+    .filter((image) => image.media?.storage_path)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
+    .map((image) => ({
+      id: image.id,
+      url: getPublicImageUrl(image.media?.storage_path) ?? "",
+      alt: image.media?.alt_text ?? row.name,
+      variantId: image.variant_id,
+      isPrimary: image.is_primary,
+      displayOrder: image.display_order,
+    }));
+
   const primaryImage =
     [...(row.product_images ?? [])]
       .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
@@ -82,6 +96,7 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
     availability: productAvailability,
     isPlaceholder: false,
     variants,
+    images,
   };
 }
 
@@ -101,7 +116,7 @@ export async function getPublishedProducts(): Promise<Product[]> {
       featured,
       category:categories(slug),
       product_variants(id,name,color,price,active,display_order),
-      product_images(is_primary,display_order,media(storage_path,alt_text))
+      product_images(id,variant_id,is_primary,display_order,media(storage_path,alt_text))
       `,
     )
     .eq("status", "published")
