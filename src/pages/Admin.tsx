@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../services/supabase";
 
@@ -22,12 +22,7 @@ export default function Admin() {
     async function checkAdmin() {
       if (!supabase || !session?.user) { setAuthorized(false); setLoading(false); return; }
       setLoading(true);
-      const { data, error } = await supabase
-        .from("admin_profiles")
-        .select("id")
-        .eq("id", session.user.id)
-        .eq("active", true)
-        .maybeSingle();
+      const { data, error } = await supabase.from("admin_profiles").select("id").eq("id", session.user.id).eq("active", true).maybeSingle();
       setAuthorized(!error && !!data);
       setLoading(false);
     }
@@ -43,52 +38,15 @@ export default function Admin() {
   }
 
   if (loading) return <main className="admin-login"><p>Уншиж байна…</p></main>;
+  if (!session) return <main className="admin-login"><form className="admin-login-card" onSubmit={signIn}><p className="admin-kicker">MEIRO / ADMIN</p><h1>Нэвтрэх</h1><label>И-мэйл<input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} required /></label><label>Нууц үг<input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} required /></label>{error&&<p className="admin-error">{error}</p>}<button type="submit">Нэвтрэх</button></form></main>;
+  if (!authorized) return <main className="admin-login"><div className="admin-login-card"><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хандах эрхгүй</h1><p>Энэ хэрэглэгч админы эрхгүй байна.</p><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></div></main>;
 
-  if (!session) return (
-    <main className="admin-login">
-      <form className="admin-login-card" onSubmit={signIn}>
-        <p className="admin-kicker">MEIRO / ADMIN</p>
-        <h1>Нэвтрэх</h1>
-        <label>И-мэйл<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-        <label>Нууц үг<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
-        {error && <p className="admin-error">{error}</p>}
-        <button type="submit">Нэвтрэх</button>
-      </form>
-    </main>
-  );
+  return <div className="admin-shell"><aside className="admin-sidebar"><strong>MEIRO</strong><span>ADMIN</span><nav>
+    <NavLink end to="/admin">Хянах самбар</NavLink><NavLink to="/admin/products">Бүтээгдэхүүн</NavLink>
+    <span>Нөөц</span><span>Медиа</span><span>Цуглуулга</span><span>Нүүр хуудас</span><span>Тохиргоо</span>
+  </nav><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></aside><Outlet /></div>;
+}
 
-  if (!authorized) return (
-    <main className="admin-login">
-      <div className="admin-login-card">
-        <p className="admin-kicker">MEIRO / ADMIN</p>
-        <h1>Хандах эрхгүй</h1>
-        <p>Энэ хэрэглэгч админы эрхгүй байна.</p>
-        <button onClick={() => supabase?.auth.signOut()}>Гарах</button>
-      </div>
-    </main>
-  );
-
-  return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <strong>MEIRO</strong><span>ADMIN</span>
-        <nav>
-          <a className="active" href="#/admin">Хянах самбар</a>
-          <span>Бүтээгдэхүүн</span><span>Нөөц</span><span>Медиа</span>
-          <span>Цуглуулга</span><span>Нүүр хуудас</span><span>Тохиргоо</span>
-        </nav>
-        <button onClick={() => supabase?.auth.signOut()}>Гарах</button>
-      </aside>
-      <main className="admin-content">
-        <p className="admin-kicker">MEIRO / ADMIN</p>
-        <h1>Хянах самбар</h1>
-        <p>Meiro-ийн бүтээгдэхүүн, нөөц болон контентыг эндээс удирдана.</p>
-        <div className="admin-cards">
-          <article><span>Бүтээгдэхүүн</span><strong>Удахгүй</strong></article>
-          <article><span>Нөөц</span><strong>Удахгүй</strong></article>
-          <article><span>Медиа</span><strong>Удахгүй</strong></article>
-        </div>
-      </main>
-    </div>
-  );
+export function AdminDashboard() {
+  return <main className="admin-content"><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хянах самбар</h1><p>Meiro-ийн бүтээгдэхүүн, нөөц болон контентыг эндээс удирдана.</p><div className="admin-cards"><article><span>Бүтээгдэхүүн</span><strong>Удахгүй</strong></article><article><span>Нөөц</span><strong>Удахгүй</strong></article><article><span>Медиа</span><strong>Удахгүй</strong></article></div></main>;
 }
