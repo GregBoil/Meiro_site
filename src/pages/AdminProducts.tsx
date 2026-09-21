@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { formatPrice } from "../data/products";
 import { supabase } from "../services/supabase";
 
@@ -13,6 +13,7 @@ function imageUrl(row: Row) {
 const labels={published:"Нийтэлсэн",draft:"Ноорог",hidden:"Нуусан"};
 
 export default function AdminProducts(){
+  const navigate=useNavigate();
   const [rows,setRows]=useState<Row[]>([]); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
   useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
     const {data,error}=await supabase.from("products").select("id,slug,name,status,product_variants(price),product_images(is_primary,display_order,media(storage_path))").order("display_order",{ascending:true});
@@ -20,7 +21,7 @@ export default function AdminProducts(){
   })()},[]);
   return <main className="admin-content"><div className="admin-page-head"><div><p className="admin-kicker">MEIRO / ADMIN</p><h1>Бүтээгдэхүүн</h1><p>Каталогийн бүтээгдэхүүнүүдийг удирдана.</p></div><Link className="admin-primary" to="/admin/products/new">+ Шинэ бүтээгдэхүүн</Link></div>
     {loading?<p className="admin-state">Уншиж байна…</p>:error?<p className="admin-error">{error}</p>:
-    <div className="admin-product-list">{rows.map(row=>{const img=imageUrl(row);const prices=(row.product_variants??[]).map(v=>v.price);return <article className="admin-product-row admin-product-clickable" key={row.id} onClick={()=>window.location.assign(`/admin/products/${row.id}`)}>
+    <div className="admin-product-list">{rows.map(row=>{const img=imageUrl(row);const prices=(row.product_variants??[]).map(v=>v.price);return <article className="admin-product-row admin-product-clickable" key={row.id} onClick={()=>navigate(`/admin/products/${row.id}`)}>
       <div className="admin-product-thumb">{img?<img src={img} alt="" />:<span>MEIRO</span>}</div>
       <div className="admin-product-name"><strong>{row.name}</strong><small>{row.slug}</small></div>
       <span className={"admin-status "+row.status}>{labels[row.status]}</span>
