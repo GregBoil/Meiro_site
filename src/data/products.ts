@@ -1,3 +1,5 @@
+export interface ProductImage { id: string; url: string; alt: string; variantId: string | null; isPrimary: boolean; displayOrder: number; }
+
 export interface ProductVariant {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface Product {
   availability: "preview" | "available" | "sold-out";
   isPlaceholder: boolean;
   variants: ProductVariant[];
+  images: ProductImage[];
 }
 
 export const formatPrice = (price: number | null) =>
