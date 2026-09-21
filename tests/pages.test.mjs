@@ -29,6 +29,8 @@ test("all public page templates render with real routes and honest preview state
     write: false,
     define: {
       "import.meta.env.VITE_CONTACT_ENDPOINT": '""',
+      "import.meta.env.VITE_SUPABASE_URL": '""',
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": '""',
       "import.meta.env.BASE_URL": '"/Meiro_site/"',
     },
   });
