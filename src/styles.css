@@ -1574,3 +1574,12 @@ p {
 .carousel-track{overflow-x:auto;overflow-y:hidden;-ms-overflow-style:none}
 .carousel-track::-webkit-scrollbar{width:0;height:0;display:none}
 .carousel-track figure:nth-child(even)>.carousel-media-image{margin-top:0}.admin-home-position{display:grid;gap:4px;justify-items:center}.admin-home-position span{font-size:8px;color:#8a7d76}.admin-home-position select{border:1px solid #d8d0ca;background:#fff;padding:6px 8px;min-width:48px;text-align:center}
+
+/* Carousel exhibition layout: all frames keep the same size; alternate cards move as a whole. */
+.carousel-track{align-items:flex-start}
+.carousel-track figure{padding-top:0!important}
+.carousel-track figure:nth-child(even){transform:translateY(40px);padding-bottom:40px!important}
+.carousel-track figure>.carousel-media-image{width:100%;height:auto;aspect-ratio:1.08/1;object-fit:cover;display:block}
+@media(max-width:800px){
+ .carousel-track figure:nth-child(even){transform:translateY(24px);padding-bottom:24px!important}
+}
