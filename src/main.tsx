@@ -7,6 +7,7 @@ import Catalogue from "./pages/Catalogue";
 import Product from "./pages/Product";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 import "./styles.css";
 
 const Router =
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Router>
       <Routes>
+        <Route path="admin" element={<Admin />} />
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="catalogue" element={<Catalogue />} />
