@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
@@ -11,7 +11,7 @@ const mnMap:Record<string,string>={а:"a",б:"b",в:"v",г:"g",д:"d",е:"ye",ё
 const slugify=(s:string)=>s.toLowerCase().split("").map(ch=>mnMap[ch]??ch).join("").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 
 export default function AdminProductEditor(){
- const {id}=useParams(); const creating=id==="new"; const nav=useNavigate();
+ const {id}=useParams(); const creating=id==="new"; const nav=useNavigate(); const topRef=useRef<HTMLElement|null>(null);
  const [form,setForm]=useState<Form>(empty); const [library,setLibrary]=useState<{id:string;storage_path:string;filename:string;alt_text:string|null}[]>([]); const [showLibrary,setShowLibrary]=useState(false); const [variants,setVariants]=useState<Variant[]>([]); const [images,setImages]=useState<ProductImage[]>([]); const [uploading,setUploading]=useState(false); const [draggedImageId,setDraggedImageId]=useState<string|null>(null); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
  useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
@@ -83,11 +83,11 @@ export default function AdminProductEditor(){
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
    const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
-   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else setSaved(true);}}
+   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}}
    setSaving(false);
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
- return <main className="admin-content"><div className="admin-editor-head"><div><Link to="/admin/products">← Бүтээгдэхүүн</Link><p className="admin-kicker">MEIRO / ADMIN</p><h1>{creating?"Шинэ бүтээгдэхүүн":form.name||"Бүтээгдэхүүн"}</h1></div><button form="product-form" className="admin-primary" disabled={saving}>{saving?"Хадгалж байна…":"Хадгалах"}</button></div>
+ return <main className="admin-content" ref={topRef}><div className="admin-editor-head"><div><Link to="/admin/products">← Бүтээгдэхүүн</Link><p className="admin-kicker">MEIRO / ADMIN</p><h1>{creating?"Шинэ бүтээгдэхүүн":form.name||"Бүтээгдэхүүн"}</h1></div><button form="product-form" className="admin-primary" disabled={saving}>{saving?"Хадгалж байна…":"Хадгалах"}</button></div>
  {error&&<p className="admin-error admin-message">{error}</p>}{saved&&<p className="admin-success admin-message">Өөрчлөлт хадгалагдлаа.</p>}
  <form id="product-form" className="admin-editor" onSubmit={save}>
   <section className="admin-panel"><h2>Үндсэн мэдээлэл</h2><div className="admin-fields">
