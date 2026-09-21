@@ -765,7 +765,7 @@ p {
 }
 
 .product-image-wrap > .product-image {
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   transition: transform 0.3s ease, filter 0.3s ease;
 }
