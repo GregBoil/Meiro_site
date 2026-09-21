@@ -45,13 +45,13 @@ export default function Carousel() {
   );
   const [interacting, setInteracting] = useState(false);
   const [active, setActive] = useState(0);
-  const [mediaSlides, setMediaSlides] = useState<{id:string;url:string;alt:string}[]>([]);
+  const [mediaSlides, setMediaSlides] = useState<{id:string;url:string;alt:string;objectPosition:string}[]>([]);
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.from("homepage_carousel").select("id,display_order,media(storage_path,alt_text)").eq("active",true).order("display_order").then(({data,error})=>{
+    supabase.from("homepage_carousel").select("id,display_order,object_position,media(storage_path,alt_text)").eq("active",true).order("display_order").then(({data,error})=>{
       if(error){console.error(error);return}
-      setMediaSlides(((data??[]) as any[]).filter(x=>x.media?.storage_path).map(x=>({id:x.id,url:supabase!.storage.from("product-images").getPublicUrl(x.media.storage_path).data.publicUrl,alt:x.media.alt_text||"Meiro"})));
+      setMediaSlides(((data??[]) as any[]).filter(x=>x.media?.storage_path).map(x=>({id:x.id,url:supabase!.storage.from("product-images").getPublicUrl(x.media.storage_path).data.publicUrl,alt:x.media.alt_text||"Meiro",objectPosition:x.object_position||"center center"})));
     });
   }, []);
 
@@ -155,7 +155,7 @@ export default function Carousel() {
       >
         {(mediaSlides.length ? mediaSlides : slides).map((slide:any, index) => (
           <figure key={slide.id||slide.title}>
-            {mediaSlides.length ? <img className="carousel-media-image" src={slide.url} alt={slide.alt}/> : <ImagePlaceholder description={slide.description} tone={slide.tone} number={`0${index + 1}`}/>}
+            {mediaSlides.length ? <img className="carousel-media-image" src={slide.url} alt={slide.alt} style={{objectPosition:slide.objectPosition}}/> : <ImagePlaceholder description={slide.description} tone={slide.tone} number={`0${index + 1}`}/>}
             <figcaption>
               <span>{mediaSlides.length ? slide.alt : slide.title}</span>
               <span>0{index + 1}</span>
