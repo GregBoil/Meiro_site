@@ -11,6 +11,7 @@ export default function Product() {
   const [product, setProduct] = useState<ProductType | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,7 +26,7 @@ export default function Product() {
       .then((item) => {
         if (cancelled) return;
         if (!item) setNotFound(true);
-        else setProduct(item);
+        else { setProduct(item); setSelectedVariantId(item.variants[0]?.id ?? null); }
       })
       .catch((error) => {
         console.error(error);
@@ -50,6 +51,10 @@ export default function Product() {
 
   if (notFound || !product) return <NotFound />;
 
+  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0] ?? null;
+  const shownPrice = selectedVariant?.priceMnt ?? product.priceMnt;
+  const availabilityLabel = selectedVariant?.availability === "sold_out" ? "Дууссан" : selectedVariant?.availability === "made_to_order" ? "Захиалгаар" : selectedVariant?.availability === "low_stock" ? "Цөөн үлдсэн" : "Бэлэн";
+
   return (
     <div className="page-shell product-page">
       <Link className="text-link back-link" to="/catalogue">
@@ -73,22 +78,28 @@ export default function Product() {
         <div className="product-detail-copy">
           <p className="eyebrow">MEIRO / БҮТЭЭЛ</p>
           <h1>{product.name}</h1>
-          <p className="product-price">{formatPrice(product.priceMnt)}</p>
+          <p className="product-price">{formatPrice(shownPrice)}</p>
           <p>{product.description}</p>
 
           {product.variants.length > 0 && (
-            <dl>
-              <div>
-                <dt>Сонголт</dt>
-                <dd>{product.variants.map((variant) => variant.name).join(", ")}</dd>
+            <div className="product-variant-picker">
+              <p className="product-option-label">Сонголт</p>
+              <div className="product-variant-buttons">
+                {product.variants.map((variant) => (
+                  <button
+                    type="button"
+                    key={variant.id}
+                    className={variant.id === selectedVariant?.id ? "selected" : ""}
+                    onClick={() => setSelectedVariantId(variant.id)}
+                  >
+                    {variant.color || variant.name}
+                  </button>
+                ))}
               </div>
-              <div>
-                <dt>Бэлэн байдал</dt>
-                <dd>
-                  {product.availability === "sold-out" ? "Дууссан" : "Бэлэн"}
-                </dd>
-              </div>
-            </dl>
+              <dl>
+                <div><dt>Бэлэн байдал</dt><dd>{availabilityLabel}</dd></div>
+              </dl>
+            </div>
           )}
 
           <Link
