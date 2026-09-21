@@ -7,7 +7,8 @@ type Variant={id?:string;name:string;color:string;sku:string;price:number;active
 type ProductImage={id:string;variant_id:string|null;media_id:string;is_primary:boolean;display_order:number;media:{storage_path:string;filename:string;alt_text:string|null}|null};
 type Form={name:string;slug:string;internal_reference:string;short_description:string;description:string;material:string;dimensions:string;category_id:string;status:"draft"|"published"|"hidden";featured:boolean;custom_order_available:boolean;custom_order_note:string;display_order:number};
 const empty:Form={name:"",slug:"",internal_reference:"",short_description:"",description:"",material:"",dimensions:"",category_id:"",status:"draft",featured:false,custom_order_available:false,custom_order_note:"",display_order:0};
-const slugify=(s:string)=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+const mnMap:Record<string,string>={а:"a",б:"b",в:"v",г:"g",д:"d",е:"ye",ё:"yo",ж:"j",з:"z",и:"i",й:"i",к:"k",л:"l",м:"m",н:"n",о:"o",ө:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ү:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",щ:"sh",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
+const slugify=(s:string)=>s.toLowerCase().split("").map(ch=>mnMap[ch]??ch).join("").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate();
@@ -67,7 +68,8 @@ export default function AdminProductEditor(){
    await supabase.from("media").delete().eq("id",image.media_id); if(image.media?.storage_path)await supabase.storage.from("product-images").remove([image.media.storage_path]); setImages(x=>x.filter(i=>i.id!==image.id));
  }
  function imageUrl(path:string){return supabase?.storage.from("product-images").getPublicUrl(path).data.publicUrl||""}
- async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setSaving(true);setError("");setSaved(false);
+ function publicationProblems(){const live=variants.filter(v=>!v._deleted&&v.active);const problems:string[]=[];if(!form.category_id)problems.push("ангилал");if(images.length===0)problems.push("зураг");if(live.length===0)problems.push("идэвхтэй хувилбар");if(live.some(v=>Number(v.price)<=0))problems.push("үнэ");return problems}
+ async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
    const payload={...form,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
    else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else setSaved(true);}}
