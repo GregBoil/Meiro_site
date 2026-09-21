@@ -753,9 +753,24 @@ p {
 }
 .product-image-wrap {
   position: relative;
-}
-.product-image-wrap .image-placeholder {
   aspect-ratio: 4/5;
+  overflow: hidden;
+}
+
+.product-image-wrap > .product-image,
+.product-image-wrap > .image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.product-image-wrap > .product-image {
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.product-image-wrap .image-placeholder {
   transition: filter 0.3s;
 }
 .product-card:hover .image-placeholder {
