@@ -43,7 +43,7 @@ export default function Admin() {
 
   return <div className="admin-shell"><aside className="admin-sidebar"><strong>MEIRO</strong><span>ADMIN</span><nav>
     <NavLink end to="/admin">Хянах самбар</NavLink><NavLink to="/admin/products">Бүтээгдэхүүн</NavLink>
-    <NavLink to="/admin/inventory">Нөөц</NavLink><NavLink to="/admin/media">Медиа</NavLink><NavLink to="/admin/collections">Цуглуулга</NavLink><span>Нүүр хуудас</span><span>Тохиргоо</span>
+    <NavLink to="/admin/inventory">Нөөц</NavLink><NavLink to="/admin/media">Медиа</NavLink><NavLink to="/admin/collections">Цуглуулга</NavLink><NavLink to="/admin/home">Нүүр хуудас</NavLink><span>Тохиргоо</span>
   </nav><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></aside><Outlet /></div>;
 }
 
