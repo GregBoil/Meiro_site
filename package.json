@@ -12,6 +12,7 @@
     "build:pages": "tsc -b && vite build --mode github-pages"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
