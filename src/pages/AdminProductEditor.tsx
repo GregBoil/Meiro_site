@@ -70,7 +70,7 @@ export default function AdminProductEditor(){
  function imageUrl(path:string){return supabase?.storage.from("product-images").getPublicUrl(path).data.publicUrl||""}
  function publicationProblems(){const live=variants.filter(v=>!v._deleted&&v.active);const problems:string[]=[];if(!form.category_id)problems.push("ангилал");if(images.length===0)problems.push("зураг");if(live.length===0)problems.push("идэвхтэй хувилбар");if(live.some(v=>Number(v.price)<=0))problems.push("үнэ");return problems}
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
-   const payload={...form,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
+   const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)setError(error.message);else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
    else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)setError(error.message);else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else setSaved(true);}}
    setSaving(false);
@@ -80,8 +80,8 @@ export default function AdminProductEditor(){
  {error&&<p className="admin-error admin-message">{error}</p>}{saved&&<p className="admin-success admin-message">Өөрчлөлт хадгалагдлаа.</p>}
  <form id="product-form" className="admin-editor" onSubmit={save}>
   <section className="admin-panel"><h2>Үндсэн мэдээлэл</h2><div className="admin-fields">
-   <label className="wide">Нэр<input value={form.name} onChange={e=>{set("name",e.target.value);if(creating)set("slug",slugify(e.target.value))}} required /></label>
-   <label>Slug<input value={form.slug} onChange={e=>set("slug",e.target.value)} required /></label><label>Дотоод код<input value={form.internal_reference} onChange={e=>set("internal_reference",e.target.value.toUpperCase())} placeholder="Жишээ: NHG" /></label>
+   <label className="wide">Нэр<input value={form.name} onChange={e=>set("name",e.target.value)} required /></label>
+   <label>Дотоод код<input value={form.internal_reference} onChange={e=>set("internal_reference",e.target.value.toUpperCase())} placeholder="Жишээ: NHG" required /></label>
    <div className="admin-category-field"><label>Ангилал<select value={form.category_id} onChange={e=>set("category_id",e.target.value)}><option value="">—</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><div className="admin-inline-add"><input aria-label="Шинэ ангилал" placeholder="Шинэ ангилал…" value={newCategory} onChange={e=>setNewCategory(e.target.value)} /><button type="button" onClick={addCategory} disabled={addingCategory||!newCategory.trim()}>{addingCategory?"…":"+ Нэмэх"}</button></div></div>
    <label className="wide">Товч тайлбар<textarea value={form.short_description} onChange={e=>set("short_description",e.target.value)} rows={2}/></label>
    <label className="wide">Дэлгэрэнгүй тайлбар<textarea value={form.description} onChange={e=>set("description",e.target.value)} rows={5}/></label>
