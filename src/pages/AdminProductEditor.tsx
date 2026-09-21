@@ -75,18 +75,8 @@ export default function AdminProductEditor(){
    if(!supabase||creating||!id)return;
    if(!window.confirm(`“${form.name}” бүтээгдэхүүнийг бүр мөсөн устгах уу? Медиа сан дахь зургууд устахгүй.`))return;
    setError("");setSaving(true);
-   const {data:vs,error:ve}=await supabase.from("product_variants").select("id").eq("product_id",id);
-   if(ve){setError(ve.message);setSaving(false);return}
-   const variantIds=(vs??[]).map(v=>v.id);
-   if(variantIds.length){
-     const {error:sm}=await supabase.from("stock_movements").delete().in("variant_id",variantIds);if(sm){setError(sm.message);setSaving(false);return}
-     const {error:inv}=await supabase.from("inventory").delete().in("variant_id",variantIds);if(inv){setError(inv.message);setSaving(false);return}
-   }
-   for(const table of ["product_images","product_collections"]){
-     const {error}=await supabase.from(table).delete().eq("product_id",id);if(error){setError(error.message);setSaving(false);return}
-   }
-   const {error:pv}=await supabase.from("product_variants").delete().eq("product_id",id);if(pv){setError(pv.message);setSaving(false);return}
-   const {error}=await supabase.from("products").delete().eq("id",id);if(error){setError(error.message);setSaving(false);return}
+   const {error}=await supabase.rpc("admin_delete_product",{p_product_id:id});
+   if(error){setError(error.message);setSaving(false);return}
    nav("/admin/products",{replace:true});
  }
  function publicationProblems(){const live=variants.filter(v=>!v._deleted&&v.active);const problems:string[]=[];if(!form.category_id)problems.push("ангилал");if(images.length===0)problems.push("зураг");if(live.length===0)problems.push("идэвхтэй хувилбар");if(live.some(v=>Number(v.price)<=0))problems.push("үнэ");return problems}
