@@ -1534,3 +1534,11 @@ p {
 .admin-editor-bottom{grid-area:bottom;display:flex;justify-content:flex-end;padding:2px 0 32px}.admin-editor-bottom .admin-primary{min-width:130px}.admin-editor{grid-template-areas:"main side" "variants side" "media side" "bottom side"}@media(max-width:950px){.admin-editor{grid-template-areas:"main" "variants" "media" "bottom" "side"}.admin-editor-bottom .admin-primary{width:100%}}
 
 .admin-stock-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;border-top:1px solid #eee9e5;padding-top:14px}.admin-stock-list{background:#fff;border:1px solid #ded8d3}.admin-stock-row{display:grid;grid-template-columns:1fr 120px 60px 60px;gap:18px;align-items:center;padding:16px 20px;border-bottom:1px solid #e8e2dd}.admin-stock-row>div{display:grid;gap:4px}.admin-stock-row small,.admin-movement small{font-size:10px;color:#8a7d76}.admin-stock-row span{font-size:10px}.admin-stock-row b{text-align:right}.admin-stock-row a{font-size:10px;text-decoration:underline}.admin-stock-history{margin-top:28px}.admin-movement{display:grid;grid-template-columns:1fr 60px 100px;gap:18px;padding:12px 0;border-top:1px solid #eee9e5;align-items:center}.admin-movement>div{display:grid;gap:4px}.admin-movement b{text-align:right}.admin-movement time{font-size:10px;color:#8a7d76;text-align:right}@media(max-width:700px){.admin-stock-fields{grid-template-columns:1fr}.admin-stock-row{grid-template-columns:1fr auto}.admin-stock-row a{display:none}.admin-movement{grid-template-columns:1fr auto}.admin-movement time{display:none}}
+
+.admin-name-code-row{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,3fr) minmax(180px,1fr);gap:20px}
+.admin-name-code-row label{margin-bottom:0}
+.admin-category-field.wide{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:end}
+.admin-category-field.wide>label{margin-bottom:0}
+.admin-category-field.wide .admin-inline-add{margin-top:0;align-items:stretch}
+.admin-category-field.wide .admin-inline-add input,.admin-category-field.wide .admin-inline-add button{height:100%}
+@media(max-width:700px){.admin-name-code-row,.admin-category-field.wide{grid-template-columns:1fr}.admin-name-code-row{gap:0}.admin-name-code-row label{margin-bottom:18px}}
