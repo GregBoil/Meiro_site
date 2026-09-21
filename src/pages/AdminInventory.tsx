@@ -45,23 +45,13 @@ export default function AdminInventory(){
   async function save(row:Row){
     if(!supabase)return;
     setSaving(true);setError("");
-    const change=draftQty-row.quantity_on_hand;
-    const {error:ie}=await supabase.from("inventory").update({
-      quantity_on_hand:draftQty,
-      low_stock_threshold:draftThreshold,
-      track_inventory:draftTrack,
-      updated_at:new Date().toISOString()
-    }).eq("variant_id",row.variant_id);
+    const {error:ie}=await supabase.rpc("admin_adjust_inventory",{
+      p_variant_id:row.variant_id,
+      p_quantity_on_hand:draftQty,
+      p_low_stock_threshold:draftThreshold,
+      p_track_inventory:draftTrack
+    });
     if(ie){setError(ie.message);setSaving(false);return}
-    if(change!==0){
-      const {error:me}=await supabase.from("stock_movements").insert({
-        variant_id:row.variant_id,
-        quantity_change:change,
-        movement_type:"adjustment",
-        reason:"Админ тохируулга"
-      });
-      if(me){setError(me.message);setSaving(false);return}
-    }
     setEditing(null);setSaving(false);await load();
   }
 
