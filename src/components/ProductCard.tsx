@@ -7,11 +7,22 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link className="product-card" to={`/catalogue/${product.slug}`}>
       <div className="product-image-wrap">
-        <ImagePlaceholder
-          description={product.imageDescription}
-          tone={product.tone}
-        />
-        <span className="product-badge">Загварын жишээ</span>
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.imageDescription}
+            className="product-image"
+            loading="lazy"
+          />
+        ) : (
+          <ImagePlaceholder
+            description={product.imageDescription}
+            tone={product.tone}
+          />
+        )}
+        {product.isPlaceholder && (
+          <span className="product-badge">Загварын жишээ</span>
+        )}
         <span className="product-open">
           <ArrowUpRight size={21} />
         </span>
