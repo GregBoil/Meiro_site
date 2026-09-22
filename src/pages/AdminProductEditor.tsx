@@ -17,7 +17,9 @@ export default function AdminProductEditor(){
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
    if(!creating){const {data,error}=await supabase.from("products").select("name,slug,internal_reference,short_description,description,material,dimensions,category_id,status,featured,custom_order_available,custom_order_note,display_order").eq("id",id!).single();
      if(error)setError(error.message); else setForm({...empty,...data} as Form);
-     const {data:v,error:ve}=await supabase.from("product_variants").select("id,name,color,sku,price,active,made_to_order,lead_time_days,display_order").eq("product_id",id!).order("display_order"); if(ve)setError(ve.message); else setVariants(((v??[]) as any[]).map(row=>({...row,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true})));
+     const productRef=String(data?.internal_reference??"").trim().toUpperCase();
+     const variantPrefix=productRef?`${productRef}-`:"";
+     const {data:v,error:ve}=await supabase.from("product_variants").select("id,name,color,sku,price,active,made_to_order,lead_time_days,display_order").eq("product_id",id!).order("display_order"); if(ve)setError(ve.message); else setVariants(((v??[]) as any[]).map(row=>{const storedSku=String(row.sku??"").trim().toUpperCase();const suffix=variantPrefix&&storedSku.startsWith(variantPrefix)?storedSku.slice(variantPrefix.length):storedSku;return {...row,sku:suffix,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}}));
      const {data:imgs,error:ie}=await supabase.from("product_images").select("id,variant_id,media_id,is_primary,display_order,media(storage_path,filename,alt_text)").eq("product_id",id!).order("display_order"); if(ie)setError(ie.message); else setImages((imgs??[]) as unknown as ProductImage[]); setLoading(false);}
  })()},[id,creating]);
  const set=<K extends keyof Form>(k:K,v:Form[K])=>setForm(x=>({...x,[k]:v}));
