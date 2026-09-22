@@ -98,9 +98,14 @@ export default function AdminProductEditor(){
    setImages(x=>x.map(i=>({...i,is_primary:i.id===imageId})));
  }
  async function deleteImage(image:ProductImage){
-   if(!supabase)return; const {error}=await supabase.from("product_images").delete().eq("id",image.id); if(error){setError(error.message);return}
-   const remaining=images.filter(i=>i.id!==image.id);setImages(remaining);
-   if(image.is_primary&&remaining.length){const next=[...remaining].sort((a,b)=>a.display_order-b.display_order)[0];await supabase.from("product_images").update({is_primary:true}).eq("id",next.id);setImages(x=>x.map(i=>({...i,is_primary:i.id===next.id})))}
+   if(!supabase)return;
+   const {error}=await supabase.rpc("admin_remove_product_image",{p_image_id:image.id});
+   if(error){showError(error.message);return}
+   const remaining=images.filter(i=>i.id!==image.id);
+   if(image.is_primary&&remaining.length){
+     const next=[...remaining].sort((a,b)=>a.display_order-b.display_order)[0];
+     setImages(remaining.map(i=>({...i,is_primary:i.id===next.id})));
+   }else setImages(remaining);
  }
  function imageUrl(path:string){return supabase?.storage.from("product-images").getPublicUrl(path).data.publicUrl||""}
  async function deleteProduct(){
