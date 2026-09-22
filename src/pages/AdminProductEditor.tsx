@@ -62,20 +62,8 @@ export default function AdminProductEditor(){
  async function openLibrary(){if(!supabase)return;setError("");const {data,error}=await supabase.from("media").select("id,storage_path,filename,alt_text").order("created_at",{ascending:false});if(error)setError(error.message);else{setLibrary((data??[]) as any[]);setShowLibrary(true)}}
  async function attachMedia(media:{id:string;storage_path:string;filename:string;alt_text:string|null}){if(!supabase)return;const pid=await ensureDraft();if(!pid)return;if(images.some(i=>i.media_id===media.id)){setError("Энэ зураг бүтээгдэхүүнд аль хэдийн нэмэгдсэн байна.");return}const {data,error}=await supabase.from("product_images").insert({product_id:pid,media_id:media.id,is_primary:images.length===0,display_order:images.length}).select("id,variant_id,media_id,is_primary,display_order").single();if(error||!data){setError(error?.message||"Зураг холбож чадсангүй.");return}setImages(x=>[...x,{...data,media} as ProductImage]);setShowLibrary(false)}
  async function setImageVariant(image:ProductImage,variantId:string){
-   if(!supabase)return; const value=variantId||null;setError("");
-   // The product primary image must always belong to the general gallery.
-   if(value&&image.is_primary){
-     const general=[...images].filter(i=>i.id!==image.id&&!i.variant_id).sort((a,b)=>a.display_order-b.display_order);
-     const replacement=general[0]??null;
-     const {error:clearError}=await supabase.from("product_images").update({is_primary:false}).eq("id",image.id);
-     if(clearError){showError(clearError.message);return}
-     if(replacement){const {error:primaryError}=await supabase.from("product_images").update({is_primary:true}).eq("id",replacement.id);if(primaryError){await supabase.from("product_images").update({is_primary:true}).eq("id",image.id);showError(primaryError.message);return}}
-   }
-   const {error}=await supabase.from("product_images").update({variant_id:value}).eq("id",image.id);
-   if(error){showError(error.message);return}
-   setImages(x=>x.map(i=>({...i,variant_id:i.id===image.id?value:i.variant_id,is_primary:value&&image.is_primary?(i.id===(x.filter(j=>j.id!==image.id&&!j.variant_id).sort((a,b)=>a.display_order-b.display_order)[0]?.id)):i.is_primary})));
+   if(!supabase)return; const value=variantId||null; const {error}=await supabase.from("product_images").update({variant_id:value}).eq("id",image.id); if(error)showError(error.message);else setImages(x=>x.map(i=>i.id===image.id?{...i,variant_id:value}:i));
  }
-
  async function reorderImages(draggedId:string,targetId:string){
    if(!supabase||draggedId===targetId)return;
    const ordered=[...images].sort((a,b)=>a.display_order-b.display_order); const from=ordered.findIndex(i=>i.id===draggedId); const to=ordered.findIndex(i=>i.id===targetId); if(from<0||to<0)return;
@@ -83,13 +71,13 @@ export default function AdminProductEditor(){
    for(const img of next){const {error}=await supabase.from("product_images").update({display_order:img.display_order}).eq("id",img.id);if(error){setError(error.message);return}}
  }
  async function makePrimary(imageId:string){
-   if(!supabase||!id)return; const target=images.find(i=>i.id===imageId);if(!target)return;if(target.variant_id){showError("Үндсэн зураг нь бүх бүтээгдэхүүнд харагдах зураг байх ёстой.");return} const current=images.find(i=>i.is_primary); if(current&&current.id!==imageId)await supabase.from("product_images").update({is_primary:false}).eq("id",current.id);
+   if(!supabase||!id)return; const current=images.find(i=>i.is_primary); if(current&&current.id!==imageId)await supabase.from("product_images").update({is_primary:false}).eq("id",current.id);
    const {error}=await supabase.from("product_images").update({is_primary:true}).eq("id",imageId); if(error)setError(error.message);else setImages(x=>x.map(i=>({...i,is_primary:i.id===imageId})));
  }
  async function deleteImage(image:ProductImage){
    if(!supabase)return; const {error}=await supabase.from("product_images").delete().eq("id",image.id); if(error){setError(error.message);return}
    const remaining=images.filter(i=>i.id!==image.id);setImages(remaining);
-   if(image.is_primary){const next=[...remaining].filter(i=>!i.variant_id).sort((a,b)=>a.display_order-b.display_order)[0];if(next){await supabase.from("product_images").update({is_primary:true}).eq("id",next.id);setImages(x=>x.map(i=>({...i,is_primary:i.id===next.id})))}}
+   if(image.is_primary&&remaining.length){const next=[...remaining].sort((a,b)=>a.display_order-b.display_order)[0];await supabase.from("product_images").update({is_primary:true}).eq("id",next.id);setImages(x=>x.map(i=>({...i,is_primary:i.id===next.id})))}
  }
  function imageUrl(path:string){return supabase?.storage.from("product-images").getPublicUrl(path).data.publicUrl||""}
  async function deleteProduct(){
@@ -136,7 +124,7 @@ export default function AdminProductEditor(){
    {images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{[...images].sort((a,b)=>a.display_order-b.display_order).map(image=><div className={`admin-image-card ${draggedImageId===image.id?"is-dragging":""}`} key={image.id} draggable onDragStart={()=>setDraggedImageId(image.id)} onDragEnd={()=>setDraggedImageId(null)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(draggedImageId)reorderImages(draggedImageId,image.id);setDraggedImageId(null)}}>
     {image.media&&<div className="admin-image-preview"><img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/><span className="admin-drag-hint">⋮⋮</span>{image.is_primary&&<span className="admin-primary-badge">Үндсэн зураг</span>}</div>}
     <div className="admin-image-card-body"><select value={image.variant_id||""} onChange={e=>setImageVariant(image,e.target.value)}><option value="">Бүх бүтээгдэхүүн</option>{variants.filter(v=>v.id&&!v._deleted).map(v=><option key={v.id} value={v.id}>{v.color||v.name||v.sku}</option>)}</select>
-    <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} disabled={!!image.variant_id} title={image.variant_id?"Үндсэн зураг нь бүх бүтээгдэхүүнд харагдах зураг байна.":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Хасах</button></div></div>
+    <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Хасах</button></div></div>
    </div>)}</div>}
   </section>
   {!creating&&<section className="admin-panel admin-danger-zone"><div><h2>Аюултай бүс</h2><p>Бүтээгдэхүүн болон түүнтэй холбоотой хувилбар, нөөцийн мэдээллийг бүр мөсөн устгана. Медиа сан дахь зургууд хадгалагдана.</p></div><button type="button" onClick={deleteProduct} disabled={saving}>Бүтээгдэхүүн устгах</button></section>}
