@@ -54,16 +54,17 @@ export function AdminDashboard() {
     supabase.from("products").select("status"),
     supabase.from("variant_availability").select("*"),
     supabase.from("media").select("id,product_images(id)"),
-    supabase.from("collections").select("id",{count:"exact",head:true}).eq("active",true)
-  ]).then(([p,v,m,col])=>{
-    const products=(p.data??[]) as any[], availability=(v.data??[]) as any[], media=(m.data??[]) as any[];
+    supabase.from("collections").select("id",{count:"exact",head:true}).eq("active",true),
+    supabase.from("homepage_carousel").select("media_id")
+  ]).then(([p,v,m,col,home])=>{
+    const products=(p.data??[]) as any[], availability=(v.data??[]) as any[], media=(m.data??[]) as any[]; const homepageMedia=new Set(((home.data??[]) as any[]).map(x=>x.media_id));
     const qty=(x:any)=>Number(x.quantity_available??x.available_quantity??(Number(x.quantity_on_hand??0)-Number(x.quantity_reserved??0)));
     setStats({
       products:products.length,
       drafts:products.filter(x=>x.status==="draft").length,
       out:availability.filter(x=>x.track_inventory!==false&&qty(x)<=0).length,
       low:availability.filter(x=>x.track_inventory!==false&&qty(x)>0&&qty(x)<=Number(x.low_stock_threshold??2)).length,
-      unused:media.filter(x=>!x.product_images?.length).length,
+      unused:media.filter(x=>!x.product_images?.length&&!homepageMedia.has(x.id)).length,
       collections:col.count??0
     })
   })},[]);
