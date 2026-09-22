@@ -29,15 +29,15 @@ export default function AdminProductEditor(){
    if(error)setError(error.message); else if(data){setCategories(x=>[...x,data as Category]);set("category_id",data.id);setNewCategory("");}
    setAddingCategory(false);
  }
- function addVariant(){const n=variants.filter(v=>!v._deleted).length+1;setVariants(v=>[...v,{name:"",color:"",sku:form.internal_reference?form.internal_reference+"-"+n:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:n-1,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
+ function addVariant(){const n=variants.filter(v=>!v._deleted).length+1;setVariants(v=>[...v,{name:"",color:"",sku:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:n-1,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
  function updateVariant(i:number,patch:Partial<Variant>){setVariants(v=>v.map((x,j)=>j===i?{...x,...patch}:x))}
  function removeVariant(i:number){setVariants(v=>v.map((x,j)=>j===i?{...x,_deleted:true}:x))}
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
-   if(!v.name.trim()||!v.color.trim()||!v.sku.trim()||Number(v.price)<=0){showError("Хувилбарыг хадгалахын өмнө нэр, өнгө, SKU болон үнийг бүрэн бөглөнө үү.");return}
+   if(!v.name.trim()||!v.sku.trim()||Number(v.price)<=0){showError("Хувилбарыг хадгалахын өмнө нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү.");return}
    let pid=productId;if(!pid){pid=await ensureDraft();if(!pid)return}
    setSaving(true);setError("");
-   const payload={product_id:pid,name:v.name.trim(),color:v.color.trim(),sku:v.sku.trim(),price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
+   const payload={product_id:pid,name:v.name.trim(),color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
    if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error){showError(error.message);setSaving(false);return}}
    else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error||!data){showError(error?.message||"Хувилбарыг хадгалж чадсангүй.");setSaving(false);return}setVariants(x=>x.map((item,j)=>j===i?{...item,id:data.id}:item))}
    setSaving(false);
@@ -46,7 +46,7 @@ export default function AdminProductEditor(){
    if(!supabase)return null;
    for(const v of variants){
      if(v._deleted){if(v.id){const {error}=await supabase.from("product_variants").delete().eq("id",v.id);if(error)return error}continue}
-     const payload={product_id:productId,name:v.name.trim()||v.color.trim()||"Хувилбар",color:v.color.trim()||null,sku:v.sku.trim(),price:Number(v.price)||0,active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
+     const payload={product_id:productId,name:v.name.trim()||"Хувилбар",color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price)||0,active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
      if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error)return error}
      else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error)return error;if(data)v.id=data.id}
    }
@@ -126,8 +126,8 @@ export default function AdminProductEditor(){
   </div></section>
   <section className="admin-panel admin-variants-panel"><div className="admin-section-head"><div><h2>Хувилбарууд</h2><p>Өнгө, үнэ болон SKU кодыг энд удирдана.</p></div><button type="button" className="admin-secondary" onClick={addVariant}>+ Хувилбар нэмэх</button></div>
    <div className="admin-variants">{variants.map((v,i)=>v._deleted?null:<div className="admin-variant" key={v.id??i}>
-    <div className="admin-variant-top"><div><strong>{v.name||v.color||`Хувилбар ${i+1}`}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
-    <div className="admin-variant-grid"><label>Нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх"/></label><label>Өнгө<input value={v.color??""} onChange={e=>updateVariant(i,{color:e.target.value})}/></label><label>SKU<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase()})} required/></label><label>Үнэ (₮)<input type="number" min="0" step="1" value={v.price} onChange={e=>updateVariant(i,{price:Number(e.target.value)})} required/></label></div>
+    <div className="admin-variant-top"><div><strong>{v.name||`Хувилбар ${i+1}`}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
+    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})} placeholder="Жишээ: BLU" required/><small>{form.internal_reference&&v.sku?`${form.internal_reference.toUpperCase()}-${v.sku}`:"Бүтээгдэхүүний дотоод код + хувилбарын код"}</small></label><label>Үнэ (₮)<input type="number" min="0" step="1" value={v.price} onChange={e=>updateVariant(i,{price:Number(e.target.value)})} required/></label></div>
     <div className="admin-variant-options"><label className="admin-check"><input type="checkbox" checked={v.active} onChange={e=>updateVariant(i,{active:e.target.checked})}/> Идэвхтэй</label><label className="admin-check"><input type="checkbox" checked={v.made_to_order} onChange={e=>updateVariant(i,{made_to_order:e.target.checked})}/> Захиалгаар хийх</label>{v.made_to_order&&<label>Хийх хугацаа (хоног)<input type="number" min="1" value={v.lead_time_days??""} onChange={e=>updateVariant(i,{lead_time_days:e.target.value?Number(e.target.value):null})}/></label>}</div>
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}
   </section>
