@@ -31,7 +31,16 @@ export default function AdminProductEditor(){
  }
  function addVariant(){const n=variants.filter(v=>!v._deleted).length+1;setVariants(v=>[...v,{name:"",color:"",sku:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:n-1,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
  function updateVariant(i:number,patch:Partial<Variant>){setVariants(v=>v.map((x,j)=>j===i?{...x,...patch}:x));setVariantErrors(e=>{if(!e[i])return e;const n={...e};delete n[i];return n})}
- function removeVariant(i:number){setVariants(v=>v.map((x,j)=>j===i?{...x,_deleted:true}:x))}
+ async function removeVariant(i:number){
+   if(!supabase)return;const v=variants[i];if(!v)return;
+   if(!v.id){setVariants(x=>x.filter((_,j)=>j!==i));return}
+   const usedByImages=images.some(image=>image.variant_id===v.id);
+   if(usedByImages){setVariantErrors(e=>({...e,[i]:"Энэ хувилбарт зураг холбогдсон байна. Эхлээд зургуудын хувилбарын холбоосыг салгана уу."}));return}
+   const {error}=await supabase.from("product_variants").delete().eq("id",v.id);
+   if(error){setVariantErrors(e=>({...e,[i]:error.message}));return}
+   setVariants(x=>x.filter((_,j)=>j!==i));
+   setVariantErrors(e=>{const n={...e};delete n[i];return n});
+ }
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
    if(!v.name.trim()||!v.sku.trim()||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
