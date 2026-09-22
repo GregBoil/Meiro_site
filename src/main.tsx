@@ -11,6 +11,7 @@ import Admin, { AdminDashboard } from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
 import AdminProductEditor from "./pages/AdminProductEditor";
 import AdminInventory from "./pages/AdminInventory";
+import AdminInventoryHistory from "./pages/AdminInventoryHistory";
 import AdminCollections from "./pages/AdminCollections";
 import AdminMedia from "./pages/AdminMedia";
 import AdminHome from "./pages/AdminHome";
@@ -28,6 +29,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="products" element={<AdminProducts />} />
           <Route path="products/:id" element={<AdminProductEditor />} />
           <Route path="inventory" element={<AdminInventory />} />
+          <Route path="inventory/history" element={<AdminInventoryHistory />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="media" element={<AdminMedia />} />
           <Route path="home" element={<AdminHome />} />
