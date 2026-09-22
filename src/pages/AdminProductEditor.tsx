@@ -92,8 +92,10 @@ export default function AdminProductEditor(){
    for(const img of next){const {error}=await supabase.from("product_images").update({display_order:img.display_order}).eq("id",img.id);if(error){setError(error.message);return}}
  }
  async function makePrimary(imageId:string){
-   if(!supabase||!id)return; const current=images.find(i=>i.is_primary); if(current&&current.id!==imageId)await supabase.from("product_images").update({is_primary:false}).eq("id",current.id);
-   const {error}=await supabase.from("product_images").update({is_primary:true}).eq("id",imageId); if(error)setError(error.message);else setImages(x=>x.map(i=>({...i,is_primary:i.id===imageId})));
+   if(!supabase)return;
+   const {error}=await supabase.rpc("admin_set_primary_product_image",{p_image_id:imageId});
+   if(error){showError(error.message);return}
+   setImages(x=>x.map(i=>({...i,is_primary:i.id===imageId})));
  }
  async function deleteImage(image:ProductImage){
    if(!supabase)return; const {error}=await supabase.from("product_images").delete().eq("id",image.id); if(error){setError(error.message);return}
