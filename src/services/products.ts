@@ -48,6 +48,10 @@ function getPublicImageUrl(storagePath: string | undefined) {
 }
 
 function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>): Product {
+  const activeVariantIds = new Set(
+    (row.product_variants ?? []).filter((variant) => variant.active).map((variant) => variant.id),
+  );
+
   const variants = [...(row.product_variants ?? [])]
     .filter((variant) => variant.active)
     .sort((a, b) => a.display_order - b.display_order)
@@ -60,7 +64,10 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
       availability: availabilityMap.get(variant.id) ?? null,
     }));
 
-  const images = [...(row.product_images ?? [])]
+  const visibleImages = [...(row.product_images ?? [])]
+    .filter((image) => !image.variant_id || activeVariantIds.has(image.variant_id));
+
+  const images = visibleImages
     .filter((image) => image.media?.storage_path)
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
     .map((image) => ({
@@ -73,7 +80,7 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
     }));
 
   const primaryImage =
-    [...(row.product_images ?? [])]
+    [...visibleImages]
       .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
       .find((image) => image.media?.storage_path)?.media ?? null;
 
