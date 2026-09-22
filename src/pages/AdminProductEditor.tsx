@@ -12,11 +12,11 @@ const slugify=(s:string)=>s.toLowerCase().split("").map(ch=>mnMap[ch]??ch).join(
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate(); const topRef=useRef<HTMLElement|null>(null);
- const [form,setForm]=useState<Form>(empty); const [productId,setProductId]=useState<string|null>(creating?null:(id??null)); const [library,setLibrary]=useState<{id:string;storage_path:string;filename:string;alt_text:string|null}[]>([]); const [showLibrary,setShowLibrary]=useState(false); const [variants,setVariants]=useState<Variant[]>([]); const [images,setImages]=useState<ProductImage[]>([]); const [uploading,setUploading]=useState(false); const [draggedImageId,setDraggedImageId]=useState<string|null>(null); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [variantErrors,setVariantErrors]=useState<Record<number,string>>({}); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+ const [form,setForm]=useState<Form>(empty); const [originalInternalReference,setOriginalInternalReference]=useState(""); const [productId,setProductId]=useState<string|null>(creating?null:(id??null)); const [library,setLibrary]=useState<{id:string;storage_path:string;filename:string;alt_text:string|null}[]>([]); const [showLibrary,setShowLibrary]=useState(false); const [variants,setVariants]=useState<Variant[]>([]); const [images,setImages]=useState<ProductImage[]>([]); const [uploading,setUploading]=useState(false); const [draggedImageId,setDraggedImageId]=useState<string|null>(null); const [categories,setCategories]=useState<Category[]>([]); const [newCategory,setNewCategory]=useState(""); const [addingCategory,setAddingCategory]=useState(false); const [loading,setLoading]=useState(!creating); const [saving,setSaving]=useState(false); const [variantErrors,setVariantErrors]=useState<Record<number,string>>({}); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
  useEffect(()=>{(async()=>{if(!supabase){setError("Supabase тохируулаагүй байна.");setLoading(false);return}
    const {data:c}=await supabase.from("categories").select("id,name").order("display_order"); setCategories((c??[]) as Category[]);
    if(!creating){const {data,error}=await supabase.from("products").select("name,slug,internal_reference,short_description,description,material,dimensions,category_id,status,featured,custom_order_available,custom_order_note,display_order").eq("id",id!).single();
-     if(error)setError(error.message); else setForm({...empty,...data} as Form);
+     if(error)setError(error.message); else {setForm({...empty,...data} as Form);setOriginalInternalReference(String(data?.internal_reference??"").trim().toUpperCase());}
      const productRef=String(data?.internal_reference??"").trim().toUpperCase();
      const variantPrefix=productRef?`${productRef}-`:"";
      const {data:v,error:ve}=await supabase.from("product_variants").select("id,name,color,sku,price,active,made_to_order,lead_time_days,display_order").eq("product_id",id!).order("display_order"); if(ve)setError(ve.message); else setVariants(((v??[]) as any[]).map(row=>{const storedSku=String(row.sku??"").trim().toUpperCase();const suffix=variantPrefix&&storedSku.startsWith(variantPrefix)?storedSku.slice(variantPrefix.length):storedSku;return {...row,sku:suffix,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}}));
@@ -136,7 +136,17 @@ export default function AdminProductEditor(){
  async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
    const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)showError(productErrorMessage(error));else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
-   else {const {error}=await supabase.from("products").update(payload).eq("id",id!);if(error)showError(productErrorMessage(error));else {const ve=await saveVariants(id!);if(ve)setError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}}
+   else {
+     const newRef=form.internal_reference.trim().toUpperCase();
+     if(newRef!==originalInternalReference){
+       const {error:re}=await supabase.rpc("admin_change_product_internal_reference",{p_product_id:id!,p_new_reference:newRef});
+       if(re){const msg=String(re.message||"");showError(msg.includes("Product internal reference already exists")?`“${newRef}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`:msg.includes("resulting variant code already exists")?"Шинэ дотоод код нь өөр хувилбарын кодтой давхцаж байна. Өөр код оруулна уу.":msg);setSaving(false);return}
+       setOriginalInternalReference(newRef);
+     }
+     const productPayload={...payload,internal_reference:newRef};
+     const {error}=await supabase.from("products").update(productPayload).eq("id",id!);
+     if(error)showError(productErrorMessage(error));else {const ve=await saveVariants(id!);if(ve)showError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}
+   }
    setSaving(false);
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
