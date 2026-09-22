@@ -1600,3 +1600,9 @@ p {
 .admin-message{padding:13px 15px;border-radius:2px;font-weight:600}
 .admin-error.admin-message{color:#8f2f24;background:#fff0ed;border:1px solid #d99084}
 .admin-success.admin-message{color:#315f3a;background:#edf7ef;border:1px solid #a9cfaf}
+
+.admin-media-head-actions{display:flex;align-items:center;gap:10px}
+.admin-media-upload{display:inline-flex;align-items:center;cursor:pointer}
+.admin-media-upload input{display:none}
+.admin-media-info small b{display:block;margin-bottom:3px;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#8a7972}
+@media(max-width:800px){.admin-media-head-actions{align-items:flex-end;flex-direction:column}}
