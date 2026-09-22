@@ -27,7 +27,7 @@ export default function AdminInventory(){
       });
       setRows(sorted);
     }
-    const {data:m}=await supabase.from("stock_movements").select("id,quantity_change,movement_type,reason,created_at,product_variants(sku,products(name))").order("created_at",{ascending:false}).limit(30);
+    const {data:m}=await supabase.from("stock_movements").select("id,quantity_change,movement_type,reason,created_at,product_variants(sku,products(name))").order("created_at",{ascending:false}).limit(10);
     setMoves((m??[]) as unknown as Move[]);
   }
   useEffect(()=>{load()},[]);
@@ -70,6 +70,6 @@ export default function AdminInventory(){
         </article>
       })}</div>
     </section>)}</div>
-    <section className="admin-panel admin-stock-history"><h2>Сүүлийн хөдөлгөөн</h2>{moves.length===0?<p className="admin-empty">Хөдөлгөөн алга байна.</p>:moves.map(m=><div className="admin-movement" key={m.id}><div><strong>{m.product_variants?.products?.name??"—"}</strong><small>{m.product_variants?.sku} · {m.reason||m.movement_type}</small></div><b>{m.quantity_change>0?"+":""}{m.quantity_change}</b><time>{new Date(m.created_at).toLocaleDateString("mn-MN")}</time></div>)}</section>
+    <section className="admin-panel admin-stock-history"><div className="admin-section-head"><h2>Сүүлийн хөдөлгөөн</h2><Link className="admin-secondary" to="/admin/inventory/history">Бүх хөдөлгөөнийг харах</Link></div>{moves.length===0?<p className="admin-empty">Хөдөлгөөн алга байна.</p>:moves.map(m=><div className="admin-movement" key={m.id}><div><strong>{m.product_variants?.products?.name??"—"}</strong><small>{m.product_variants?.sku} · {m.reason||m.movement_type}</small></div><b>{m.quantity_change>0?"+":""}{m.quantity_change}</b><time>{new Date(m.created_at).toLocaleString("mn-MN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</time></div>)}</section>
   </main>
 }
