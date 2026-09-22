@@ -1606,3 +1606,8 @@ p {
 .admin-media-upload input{display:none}
 .admin-media-info small b{display:block;margin-bottom:3px;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#8a7972}
 @media(max-width:800px){.admin-media-head-actions{align-items:flex-end;flex-direction:column}}
+
+.admin-variant-top>div{display:flex;align-items:center;gap:8px}
+.admin-variant-actions{display:flex;align-items:center;gap:7px}
+.admin-draft-badge{display:inline-flex;padding:3px 6px;border:1px solid #d5b878;background:#fff8e6;color:#80601f;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+@media(max-width:600px){.admin-variant-top{align-items:flex-start}.admin-variant-actions{flex-wrap:wrap;justify-content:flex-end}}
