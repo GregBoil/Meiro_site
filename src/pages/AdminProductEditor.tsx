@@ -37,8 +37,10 @@ export default function AdminProductEditor(){
    for(const v of variants){
      if(v._deleted){if(v.id){const {error}=await supabase.from("product_variants").delete().eq("id",v.id);if(error)return error}continue}
      const payload={product_id:productId,name:v.name.trim()||v.color.trim()||"Хувилбар",color:v.color.trim()||null,sku:v.sku.trim(),price:Number(v.price)||0,active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
-     const q=v.id?supabase.from("product_variants").update(payload).eq("id",v.id):supabase.from("product_variants").insert(payload);const {error}=await q;if(error)return error;
-   } return null;
+     if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error)return error}
+     else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error)return error;if(data)v.id=data.id}
+   }
+   setVariants([...variants]); return null;
  }
  async function ensureDraft(){
    if(!supabase)return null;if(productId)return productId;
@@ -124,6 +126,7 @@ export default function AdminProductEditor(){
    {images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{[...images].sort((a,b)=>a.display_order-b.display_order).map(image=><div className={`admin-image-card ${draggedImageId===image.id?"is-dragging":""}`} key={image.id} draggable onDragStart={()=>setDraggedImageId(image.id)} onDragEnd={()=>setDraggedImageId(null)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(draggedImageId)reorderImages(draggedImageId,image.id);setDraggedImageId(null)}}>
     {image.media&&<div className="admin-image-preview"><img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/><span className="admin-drag-hint">⋮⋮</span>{image.is_primary&&<span className="admin-primary-badge">Үндсэн зураг</span>}</div>}
     <div className="admin-image-card-body"><select value={image.variant_id||""} onChange={e=>setImageVariant(image,e.target.value)}><option value="">Бүх бүтээгдэхүүн</option>{variants.filter(v=>v.id&&!v._deleted).map(v=><option key={v.id} value={v.id}>{v.color||v.name||v.sku}</option>)}</select>
+    {variants.some(v=>!v._deleted&&!v.id)&&<small className="admin-image-variant-hint">Шинэ хувилбарыг зурагтай холбохын өмнө бүтээгдэхүүнийг хадгална уу.</small>}
     <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Хасах</button></div></div>
    </div>)}</div>}
   </section>
