@@ -32,6 +32,16 @@ export default function AdminProductEditor(){
  function addVariant(){const n=variants.filter(v=>!v._deleted).length+1;setVariants(v=>[...v,{name:"",color:"",sku:form.internal_reference?form.internal_reference+"-"+n:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:n-1,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
  function updateVariant(i:number,patch:Partial<Variant>){setVariants(v=>v.map((x,j)=>j===i?{...x,...patch}:x))}
  function removeVariant(i:number){setVariants(v=>v.map((x,j)=>j===i?{...x,_deleted:true}:x))}
+ async function saveVariant(i:number){
+   if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
+   if(!v.name.trim()||!v.color.trim()||!v.sku.trim()||Number(v.price)<=0){showError("Хувилбарыг хадгалахын өмнө нэр, өнгө, SKU болон үнийг бүрэн бөглөнө үү.");return}
+   let pid=productId;if(!pid){pid=await ensureDraft();if(!pid)return}
+   setSaving(true);setError("");
+   const payload={product_id:pid,name:v.name.trim(),color:v.color.trim(),sku:v.sku.trim(),price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
+   if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error){showError(error.message);setSaving(false);return}}
+   else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error||!data){showError(error?.message||"Хувилбарыг хадгалж чадсангүй.");setSaving(false);return}setVariants(x=>x.map((item,j)=>j===i?{...item,id:data.id}:item))}
+   setSaving(false);
+ }
  async function saveVariants(productId:string){
    if(!supabase)return null;
    for(const v of variants){
@@ -116,7 +126,7 @@ export default function AdminProductEditor(){
   </div></section>
   <section className="admin-panel admin-variants-panel"><div className="admin-section-head"><div><h2>Хувилбарууд</h2><p>Өнгө, үнэ болон SKU кодыг энд удирдана.</p></div><button type="button" className="admin-secondary" onClick={addVariant}>+ Хувилбар нэмэх</button></div>
    <div className="admin-variants">{variants.map((v,i)=>v._deleted?null:<div className="admin-variant" key={v.id??i}>
-    <div className="admin-variant-top"><strong>{v.name||v.color||`Хувилбар ${i+1}`}</strong><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div>
+    <div className="admin-variant-top"><div><strong>{v.name||v.color||`Хувилбар ${i+1}`}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
     <div className="admin-variant-grid"><label>Нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх"/></label><label>Өнгө<input value={v.color??""} onChange={e=>updateVariant(i,{color:e.target.value})}/></label><label>SKU<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase()})} required/></label><label>Үнэ (₮)<input type="number" min="0" step="1" value={v.price} onChange={e=>updateVariant(i,{price:Number(e.target.value)})} required/></label></div>
     <div className="admin-variant-options"><label className="admin-check"><input type="checkbox" checked={v.active} onChange={e=>updateVariant(i,{active:e.target.checked})}/> Идэвхтэй</label><label className="admin-check"><input type="checkbox" checked={v.made_to_order} onChange={e=>updateVariant(i,{made_to_order:e.target.checked})}/> Захиалгаар хийх</label>{v.made_to_order&&<label>Хийх хугацаа (хоног)<input type="number" min="1" value={v.lead_time_days??""} onChange={e=>updateVariant(i,{lead_time_days:e.target.value?Number(e.target.value):null})}/></label>}</div>
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}
@@ -126,7 +136,6 @@ export default function AdminProductEditor(){
    {images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{[...images].sort((a,b)=>a.display_order-b.display_order).map(image=><div className={`admin-image-card ${draggedImageId===image.id?"is-dragging":""}`} key={image.id} draggable onDragStart={()=>setDraggedImageId(image.id)} onDragEnd={()=>setDraggedImageId(null)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(draggedImageId)reorderImages(draggedImageId,image.id);setDraggedImageId(null)}}>
     {image.media&&<div className="admin-image-preview"><img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/><span className="admin-drag-hint">⋮⋮</span>{image.is_primary&&<span className="admin-primary-badge">Үндсэн зураг</span>}</div>}
     <div className="admin-image-card-body"><select value={image.variant_id||""} onChange={e=>setImageVariant(image,e.target.value)}><option value="">Бүх бүтээгдэхүүн</option>{variants.filter(v=>v.id&&!v._deleted).map(v=><option key={v.id} value={v.id}>{v.color||v.name||v.sku}</option>)}</select>
-    {variants.some(v=>!v._deleted&&!v.id)&&<small className="admin-image-variant-hint">Шинэ хувилбарыг зурагтай холбохын өмнө бүтээгдэхүүнийг хадгална уу.</small>}
     <div className="admin-image-actions"><button type="button" className={image.is_primary?"is-primary":""} onClick={()=>makePrimary(image.id)}>{image.is_primary?"Үндсэн зураг":"Үндсэн болгох"}</button><button type="button" onClick={()=>deleteImage(image)}>Хасах</button></div></div>
    </div>)}</div>}
   </section>
