@@ -1611,3 +1611,8 @@ p {
 .admin-variant-actions{display:flex;align-items:center;gap:7px}
 .admin-draft-badge{display:inline-flex;padding:3px 6px;border:1px solid #d5b878;background:#fff8e6;color:#80601f;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 @media(max-width:600px){.admin-variant-top{align-items:flex-start}.admin-variant-actions{flex-wrap:wrap;justify-content:flex-end}}
+
+.admin-variant-grid>label{display:flex;flex-direction:column;align-items:stretch}
+.admin-variant-grid>label>input{width:100%;box-sizing:border-box}
+.admin-code-preview{font-size:9px;font-weight:500;color:#8a7972;text-transform:none;letter-spacing:0}
+.admin-variant-error{margin-top:10px;padding:10px 12px;border:1px solid #d99084;background:#fff0ed;color:#8f2f24;font-size:12px;font-weight:600}
