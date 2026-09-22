@@ -27,7 +27,7 @@ export default function Product() {
       .then((item) => {
         if (cancelled) return;
         if (!item) setNotFound(true);
-        else { setProduct(item); setSelectedVariantId(item.variants[0]?.id ?? null); setSelectedImageId(item.images?.[0]?.id ?? null); }
+        else { setProduct(item); setSelectedVariantId(null); const primary=item.images?.find(image=>image.isPrimary)??item.images?.[0]; setSelectedImageId(primary?.id ?? null); }
       })
       .catch((error) => {
         console.error(error);
@@ -52,11 +52,11 @@ export default function Product() {
 
   if (notFound || !product) return <NotFound />;
 
-  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0] ?? null;
+  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const shownPrice = selectedVariant?.priceMnt ?? product.priceMnt;
   const generalImages = product.images.filter((image) => !image.variantId);
   const variantImages = selectedVariant ? product.images.filter((image) => image.variantId === selectedVariant.id) : [];
-  const galleryImages = variantImages.length > 0 ? [...variantImages, ...generalImages] : generalImages.length > 0 ? generalImages : product.images;
+  const galleryImages = selectedVariant ? (variantImages.length > 0 ? [...variantImages, ...generalImages] : generalImages.length > 0 ? generalImages : product.images) : product.images;
   const selectedImage = galleryImages.find((image) => image.id === selectedImageId) ?? galleryImages[0] ?? null;
   const availabilityLabel = selectedVariant?.availability === "sold_out" ? "Дууссан" : selectedVariant?.availability === "made_to_order" ? "Захиалгаар" : selectedVariant?.availability === "low_stock" ? "Цөөн үлдсэн" : "Бэлэн";
 
@@ -95,7 +95,7 @@ export default function Product() {
                     type="button"
                     key={variant.id}
                     className={variant.id === selectedVariant?.id ? "selected" : ""}
-                    onClick={() => { setSelectedVariantId(variant.id); const first = product.images.find((image) => image.variantId === variant.id) ?? product.images.find((image) => !image.variantId); setSelectedImageId(first?.id ?? null); }}
+                    onClick={() => { if(selectedVariantId===variant.id){setSelectedVariantId(null);const primary=product.images.find(image=>image.isPrimary)??product.images[0];setSelectedImageId(primary?.id??null)}else{setSelectedVariantId(variant.id);const first=product.images.find((image)=>image.variantId===variant.id)??product.images.find((image)=>!image.variantId);setSelectedImageId(first?.id??null)} }}
                   >
                     {variant.color || variant.name}
                   </button>
