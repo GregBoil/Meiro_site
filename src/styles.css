@@ -1616,3 +1616,7 @@ p {
 .admin-variant-grid>label>input{width:100%;box-sizing:border-box}
 .admin-code-preview{font-size:9px;font-weight:500;color:#8a7972;text-transform:none;letter-spacing:0}
 .admin-variant-error{margin-top:10px;padding:10px 12px;border:1px solid #d99084;background:#fff0ed;color:#8f2f24;font-size:12px;font-weight:600}
+
+/* Keep variant fields aligned even when the internal-code preview is present. */
+.admin-variant-grid>label{position:relative}
+.admin-variant-grid .admin-code-preview{position:absolute;left:0;top:22px;line-height:1;white-space:nowrap}
