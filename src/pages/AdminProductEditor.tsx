@@ -34,12 +34,20 @@ export default function AdminProductEditor(){
  async function removeVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v)return;
    if(!v.id){setVariants(x=>x.filter((_,j)=>j!==i));return}
-   const usedByImages=images.some(image=>image.variant_id===v.id);
-   if(usedByImages){setVariantErrors(e=>({...e,[i]:"Энэ хувилбарт зураг холбогдсон байна. Эхлээд зургуудын хувилбарын холбоосыг салгана уу."}));return}
-   const {error}=await supabase.from("product_variants").delete().eq("id",v.id);
+   const confirmed=window.confirm("Энэ хувилбарыг устгах уу?\n\nХувилбартай холбоотой зураг, нөөцийн мэдээлэл бүтээгдэхүүнээс хасагдана. Медиа сан дахь зургууд устахгүй.");
+   if(!confirmed)return;
+   const {error}=await supabase.rpc("admin_delete_product_variant",{p_variant_id:v.id});
    if(error){setVariantErrors(e=>({...e,[i]:error.message}));return}
+   const removedImageIds=new Set(images.filter(image=>image.variant_id===v.id).map(image=>image.id));
+   const remaining=images.filter(image=>!removedImageIds.has(image.id));
+   const removedPrimary=images.some(image=>image.variant_id===v.id&&image.is_primary);
+   if(removedPrimary&&remaining.length){
+     const general=[...remaining].filter(image=>!image.variant_id).sort((a,b)=>a.display_order-b.display_order);
+     const next=(general[0]??[...remaining].sort((a,b)=>a.display_order-b.display_order)[0]);
+     setImages(remaining.map(image=>({...image,is_primary:image.id===next.id})));
+   }else setImages(remaining);
    setVariants(x=>x.filter((_,j)=>j!==i));
-   setVariantErrors(e=>{const n={...e};delete n[i];return n});
+   setVariantErrors({});
  }
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
