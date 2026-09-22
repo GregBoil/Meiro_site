@@ -1620,3 +1620,5 @@ p {
 /* Keep variant fields aligned even when the internal-code preview is present. */
 .admin-variant-grid>label{position:relative}
 .admin-variant-grid .admin-code-preview{position:absolute;left:0;top:22px;line-height:1;white-space:nowrap}
+
+.admin-variant-title-code{font-family:inherit;font-size:.58em;font-weight:500;color:#8a7972;letter-spacing:.04em;vertical-align:middle}
