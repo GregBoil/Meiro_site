@@ -1,8 +1,11 @@
+export interface ProductImage { id: string; url: string; alt: string; variantId: string | null; isPrimary: boolean; displayOrder: number; }
+
 export interface ProductVariant {
   id: string;
   name: string;
   stock: number | null;
   priceMnt: number | null;
+  sku: string;
   color?: string | null;
   availability?: "available" | "low_stock" | "sold_out" | "made_to_order" | null;
 }
@@ -10,6 +13,7 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   slug: string;
+  internalReference: string;
   name: string;
   category: string;
   description: string;
@@ -20,6 +24,7 @@ export interface Product {
   availability: "preview" | "available" | "sold-out";
   isPlaceholder: boolean;
   variants: ProductVariant[];
+  images: ProductImage[];
 }
 
 export const formatPrice = (price: number | null) =>

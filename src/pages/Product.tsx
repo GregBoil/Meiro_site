@@ -11,6 +11,8 @@ export default function Product() {
   const [product, setProduct] = useState<ProductType | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,7 +27,7 @@ export default function Product() {
       .then((item) => {
         if (cancelled) return;
         if (!item) setNotFound(true);
-        else setProduct(item);
+        else { setProduct(item); setSelectedVariantId(null); const primary=item.images?.find(image=>image.isPrimary)??item.images?.[0]; setSelectedImageId(primary?.id ?? null); }
       })
       .catch((error) => {
         console.error(error);
@@ -50,6 +52,14 @@ export default function Product() {
 
   if (notFound || !product) return <NotFound />;
 
+  const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const shownPrice = selectedVariant?.priceMnt ?? product.priceMnt;
+  const generalImages = product.images.filter((image) => !image.variantId);
+  const variantImages = selectedVariant ? product.images.filter((image) => image.variantId === selectedVariant.id) : [];
+  const galleryImages = selectedVariant ? (variantImages.length > 0 ? [...variantImages, ...generalImages] : generalImages.length > 0 ? generalImages : product.images) : product.images;
+  const selectedImage = galleryImages.find((image) => image.id === selectedImageId) ?? galleryImages[0] ?? null;
+  const availabilityLabel = selectedVariant?.availability === "sold_out" ? "Дууссан" : selectedVariant?.availability === "made_to_order" ? "Захиалгаар" : selectedVariant?.availability === "low_stock" ? "Цөөн үлдсэн" : "Бэлэн";
+
   return (
     <div className="page-shell product-page">
       <Link className="text-link back-link" to="/catalogue">
@@ -57,38 +67,45 @@ export default function Product() {
       </Link>
 
       <div className="product-detail">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.imageDescription}
-            className="product-image"
-          />
-        ) : (
-          <ImagePlaceholder
-            description={product.imageDescription}
-            tone={product.tone}
-          />
-        )}
+        <div className="product-gallery">
+          {selectedImage ? (
+            <img src={selectedImage.url} alt={selectedImage.alt} className="product-image" />
+          ) : product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.imageDescription} className="product-image" />
+          ) : (
+            <ImagePlaceholder description={product.imageDescription} tone={product.tone} />
+          )}
+          {galleryImages.length > 1 && <div className="product-thumbnails">
+            {galleryImages.map((image) => <button type="button" key={image.id} className={image.id===selectedImage?.id?"selected":""} onClick={()=>setSelectedImageId(image.id)}><img src={image.url} alt={image.alt}/></button>)}
+          </div>}
+        </div>
 
         <div className="product-detail-copy">
           <p className="eyebrow">MEIRO / БҮТЭЭЛ</p>
           <h1>{product.name}</h1>
-          <p className="product-price">{formatPrice(product.priceMnt)}</p>
+          {(selectedVariant?.sku || product.internalReference) && <p className="product-reference">Код: {selectedVariant?.sku || product.internalReference}</p>}
+          <p className="product-price">{formatPrice(shownPrice)}</p>
           <p>{product.description}</p>
 
           {product.variants.length > 0 && (
-            <dl>
-              <div>
-                <dt>Сонголт</dt>
-                <dd>{product.variants.map((variant) => variant.name).join(", ")}</dd>
+            <div className="product-variant-picker">
+              <p className="product-option-label">Сонголт</p>
+              <div className="product-variant-buttons">
+                {product.variants.map((variant) => (
+                  <button
+                    type="button"
+                    key={variant.id}
+                    className={variant.id === selectedVariant?.id ? "selected" : ""}
+                    onClick={() => { if(selectedVariantId===variant.id){setSelectedVariantId(null);const primary=product.images.find(image=>image.isPrimary)??product.images[0];setSelectedImageId(primary?.id??null)}else{setSelectedVariantId(variant.id);const first=product.images.find((image)=>image.variantId===variant.id)??product.images.find((image)=>!image.variantId);setSelectedImageId(first?.id??null)} }}
+                  >
+                    {variant.color || variant.name}
+                  </button>
+                ))}
               </div>
-              <div>
-                <dt>Бэлэн байдал</dt>
-                <dd>
-                  {product.availability === "sold-out" ? "Дууссан" : "Бэлэн"}
-                </dd>
-              </div>
-            </dl>
+              <dl>
+                <div><dt>Бэлэн байдал</dt><dd>{availabilityLabel}</dd></div>
+              </dl>
+            </div>
           )}
 
           <Link

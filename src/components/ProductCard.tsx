@@ -31,6 +31,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <h2>{product.name}</h2>
         <span>{formatPrice(product.priceMnt)}</span>
       </div>
+      {product.internalReference && <p className="product-reference">Код: {product.internalReference}</p>}
       <p>{product.description}</p>
     </Link>
   );
