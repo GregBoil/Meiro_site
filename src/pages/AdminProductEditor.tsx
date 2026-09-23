@@ -62,16 +62,6 @@ export default function AdminProductEditor(){
    else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error||!data){setVariantErrors(e=>({...e,[i]:error?.code==="23505"?"Энэ хувилбарын дотоод код аль хэдийн ашиглагдаж байна.":error?.message||"Хувилбарыг хадгалж чадсангүй."}));setSaving(false);return}setVariants(x=>x.map((item,j)=>j===i?{...item,id:data.id}:item))}
    setVariantErrors(e=>{const n={...e};delete n[i];return n});setSaving(false);
  }
- async function saveVariants(productId:string){
-   if(!supabase)return null;
-   for(const v of variants){
-     if(v._deleted){if(v.id){const {error}=await supabase.from("product_variants").delete().eq("id",v.id);if(error)return error}continue}
-     const payload={product_id:productId,name:v.name.trim(),color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
-     if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error)return error}
-     else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error)return error;if(data)v.id=data.id}
-   }
-   setVariants([...variants]); return null;
- }
  async function ensureDraft(){
    if(!supabase)return null;if(productId)return productId;
    if(!form.name.trim()||!form.internal_reference.trim()){setError("Зураг нэмэхийн өмнө нэр болон дотоод кодыг оруулна уу.");return null}
@@ -135,56 +125,71 @@ export default function AdminProductEditor(){
    return error?.message||"Бүтээгдэхүүнийг хадгалж чадсангүй.";
  }
  async function save(e:FormEvent){
-   e.preventDefault();if(!supabase)return;
+   e.preventDefault();if(!supabase||saving)return;
    setError("");setSaved(false);
    if(form.status==="published"){
      const problems=publicationProblems();
      if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
-   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!v.sku.trim()||!Number.isFinite(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
+   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!/^[A-Z0-9]+$/.test(v.sku.trim().toUpperCase())||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
    if(invalidVariant){showError("Хувилбар бүрийн нэр, дотоод код болон үнийг шалгана уу. Нийтлэх хувилбарын үнэ 0-ээс их байх ёстой.");return}
+   if(variants.some(v=>v._deleted)){showError("Устгах хувилбарыг эхлээд тусад нь устгана уу.");return}
    const newRef=form.internal_reference.trim().toUpperCase();
+   if(!/^[A-Z0-9]+$/.test(newRef)){showError("Бүтээгдэхүүний дотоод код зөвхөн латин том үсэг болон тоо агуулна.");return}
    const generatedSlug=slugify(newRef);
    if(!generatedSlug){showError("Дотоод код оруулна уу.");return}
    setSaving(true);
    try{
-     let pid=productId;
-     // Keep the product unpublished while its variants and other fields are saved.
-     const payload={...form,internal_reference:newRef,status:"draft" as const,slug:pid?form.slug:generatedSlug,
+     const payload={...form,internal_reference:newRef,slug:productId?form.slug:generatedSlug,
        short_description:form.short_description||null,description:form.description||null,
        material:form.material||null,dimensions:form.dimensions||null,
        category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
-     if(pid){
-       if(newRef!==originalInternalReference){
-         const {error:re}=await supabase.rpc("admin_change_product_internal_reference",{p_product_id:pid,p_new_reference:newRef});
-         if(re){
-           const msg=String(re.message||"");
-           showError(msg.includes("Product internal reference already exists")?`“${newRef}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`:msg.includes("resulting variant code already exists")?"Шинэ дотоод код нь өөр хувилбарын кодтой давхцаж байна. Өөр код оруулна уу.":msg);
-           return;
-         }
-         setOriginalInternalReference(newRef);
-       }
-       const {error:pe}=await supabase.from("products").update(payload).eq("id",pid);
-       if(pe){showError(productErrorMessage(pe));return}
-     }else{
-       const {data,error:pe}=await supabase.from("products").insert(payload).select("id").single();
-       if(pe||!data){showError(productErrorMessage(pe));return}
-       pid=data.id;setProductId(pid);setOriginalInternalReference(newRef);
+     const variantPayload=variants.map(v=>({
+       id:v.id??null,name:v.name.trim(),sku:v.sku.trim().toUpperCase(),
+       price:Number(v.price),active:v.active,made_to_order:v.made_to_order,
+       lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,
+       display_order:v.display_order
+     }));
+     const {data:pid,error:saveError}=await supabase.rpc("admin_save_product",{
+       p_product_id:productId,p_product:payload,p_variants:variantPayload
+     });
+     if(saveError||!pid){
+       const message=String(saveError?.message||"");
+       const translated=message.includes("Product internal reference already exists")
+         ?`“${newRef}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`
+         :message.includes("resulting variant code already exists")
+         ?"Шинэ дотоод код нь өөр хувилбарын кодтой давхцаж байна. Өөр код оруулна уу."
+         :message.includes("Product is not ready to publish")
+         ?"Нийтлэх боломжгүй байна. Ангилал, зураг, идэвхтэй хувилбар болон үнийг шалгана уу."
+         :message.includes("Duplicate variant code")
+         ?"Хувилбарын дотоод код давхцаж байна."
+         :message.includes("Invalid variant")
+         ?"Хувилбарын нэр, дотоод код болон үнийг шалгана уу."
+         :message.includes("Unauthorized")
+         ?"Хадгалах эрх байхгүй байна. Дахин нэвтэрнэ үү."
+         :productErrorMessage(saveError);
+       showError(translated);return;
      }
-     if(!pid){showError("Бүтээгдэхүүнийг хадгалж чадсангүй.");return}
-     const ve=await saveVariants(pid);
-     if(ve){showError("Хувилбарыг хадгалж чадсангүй. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+ve.message);return}
-     if(form.status==="published"){
-       const {data:ready,error:checkError}=await supabase.rpc("product_is_ready_to_publish",{p_product_id:pid});
-       if(checkError||!ready){showError("Нийтлэх боломжгүй байна. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+(checkError?.message||"Ангилал, зураг, идэвхтэй хувилбар болон үнийг шалгана уу."));return}
+     setProductId(pid);setOriginalInternalReference(newRef);
+     setForm(x=>({...x,internal_reference:newRef,slug:x.slug||generatedSlug}));
+     const {data:updatedVariants,error:reloadError}=await supabase.from("product_variants")
+       .select("id,name,color,sku,price,active,made_to_order,lead_time_days,display_order")
+       .eq("product_id",pid).order("display_order");
+     if(reloadError){
+       showError("Бүтээгдэхүүн хадгалагдсан боловч хувилбаруудыг дахин уншиж чадсангүй. Хуудсыг дахин ачаална уу.");
+       return;
      }
-     if(form.status!=="draft"){
-       const {error:statusError}=await supabase.from("products").update({status:form.status}).eq("id",pid);
-       if(statusError){showError("Төлөвийг хадгалж чадсангүй. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+statusError.message);return}
-     }
+     const prefix=newRef+"-";
+     setVariants(((updatedVariants??[]) as any[]).map(row=>{
+       const storedSku=String(row.sku??"").trim().toUpperCase();
+       return {...row,sku:storedSku.startsWith(prefix)?storedSku.slice(prefix.length):storedSku,
+         quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true};
+     }));
      setSaved(true);
      topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});
      if(!productId)nav("/admin/products/"+pid,{replace:true});
+   }catch{
+     showError("Хадгалах үед алдаа гарлаа. Хуудсыг дахин ачаалж мэдээллээ шалгана уу.");
    }finally{setSaving(false)}
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
