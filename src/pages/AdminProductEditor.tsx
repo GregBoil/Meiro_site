@@ -133,21 +133,55 @@ export default function AdminProductEditor(){
    if(error?.code==="23505"&&String(error?.message||"").includes("slug"))return `“${form.internal_reference}” кодоос үүссэн хаяг аль хэдийн ашиглагдаж байна. Өөр дотоод код оруулна уу.`;
    return error?.message||"Бүтээгдэхүүнийг хадгалж чадсангүй.";
  }
- async function save(e:FormEvent){e.preventDefault();if(!supabase)return;setError("");setSaved(false);if(form.status==="published"){const problems=publicationProblems();if(problems.length){setError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}}setSaving(true);
-   const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");setSaving(false);return}const payload={...form,slug:creating?generatedSlug:form.slug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
-   if(creating){const {data,error}=await supabase.from("products").insert(payload).select("id").single();if(error)showError(productErrorMessage(error));else if(data){const ve=await saveVariants(data.id);if(ve)setError(ve.message);else nav("/admin/products/"+data.id,{replace:true});}}
-   else {
-     const newRef=form.internal_reference.trim().toUpperCase();
-     if(newRef!==originalInternalReference){
-       const {error:re}=await supabase.rpc("admin_change_product_internal_reference",{p_product_id:id!,p_new_reference:newRef});
-       if(re){const msg=String(re.message||"");showError(msg.includes("Product internal reference already exists")?`“${newRef}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`:msg.includes("resulting variant code already exists")?"Шинэ дотоод код нь өөр хувилбарын кодтой давхцаж байна. Өөр код оруулна уу.":msg);setSaving(false);return}
-       setOriginalInternalReference(newRef);
-     }
-     const productPayload={...payload,internal_reference:newRef};
-     const {error}=await supabase.from("products").update(productPayload).eq("id",id!);
-     if(error)showError(productErrorMessage(error));else {const ve=await saveVariants(id!);if(ve)showError(ve.message);else {setSaved(true);topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});}}
+ async function save(e:FormEvent){
+   e.preventDefault();if(!supabase)return;
+   setError("");setSaved(false);
+   if(form.status==="published"){
+     const problems=publicationProblems();
+     if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
-   setSaving(false);
+   const newRef=form.internal_reference.trim().toUpperCase();
+   const generatedSlug=slugify(newRef);
+   if(!generatedSlug){showError("Дотоод код оруулна уу.");return}
+   setSaving(true);
+   try{
+     let pid=productId;
+     // Keep the product unpublished while its variants and other fields are saved.
+     const payload={...form,internal_reference:newRef,status:"draft" as const,slug:pid?form.slug:generatedSlug,
+       short_description:form.short_description||null,description:form.description||null,
+       material:form.material||null,dimensions:form.dimensions||null,
+       category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
+     if(pid){
+       if(newRef!==originalInternalReference){
+         const {error:re}=await supabase.rpc("admin_change_product_internal_reference",{p_product_id:pid,p_new_reference:newRef});
+         if(re){
+           const msg=String(re.message||"");
+           showError(msg.includes("Product internal reference already exists")?`“${newRef}” дотоод кодтой бүтээгдэхүүн аль хэдийн байна. Өөр код оруулна уу.`:msg.includes("resulting variant code already exists")?"Шинэ дотоод код нь өөр хувилбарын кодтой давхцаж байна. Өөр код оруулна уу.":msg);
+           return;
+         }
+         setOriginalInternalReference(newRef);
+       }
+       const {error:pe}=await supabase.from("products").update(payload).eq("id",pid);
+       if(pe){showError(productErrorMessage(pe));return}
+     }else{
+       const {data,error:pe}=await supabase.from("products").insert(payload).select("id").single();
+       if(pe||!data){showError(productErrorMessage(pe));return}
+       pid=data.id;setProductId(pid);setOriginalInternalReference(newRef);
+     }
+     const ve=await saveVariants(pid);
+     if(ve){showError("Хувилбарыг хадгалж чадсангүй. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+ve.message);return}
+     if(form.status==="published"){
+       const {data:ready,error:checkError}=await supabase.rpc("product_is_ready_to_publish",{p_product_id:pid});
+       if(checkError||!ready){showError("Нийтлэх боломжгүй байна. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+(checkError?.message||"Ангилал, зураг, идэвхтэй хувилбар болон үнийг шалгана уу."));return}
+     }
+     if(form.status!=="draft"){
+       const {error:statusError}=await supabase.from("products").update({status:form.status}).eq("id",pid);
+       if(statusError){showError("Төлөвийг хадгалж чадсангүй. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+statusError.message);return}
+     }
+     setSaved(true);
+     topRef.current?.scrollIntoView({behavior:"smooth",block:"start"});
+     if(!productId)nav("/admin/products/"+pid,{replace:true});
+   }finally{setSaving(false)}
  }
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
  return <main className="admin-content" ref={topRef}><div className="admin-editor-head"><div><Link to="/admin/products">← Бүтээгдэхүүн</Link><p className="admin-kicker">MEIRO / ADMIN</p><h1>{creating?"Шинэ бүтээгдэхүүн":form.name||"Бүтээгдэхүүн"}</h1></div><button form="product-form" className="admin-primary" disabled={saving}>{saving?"Хадгалж байна…":"Хадгалах"}</button></div>
