@@ -54,6 +54,7 @@ export default function AdminProductEditor(){
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
    if(!v.name.trim()||!v.sku.trim()||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
+   if(productId&&form.internal_reference.trim().toUpperCase()!==originalInternalReference){setVariantErrors(e=>({...e,[i]:"Эхлээд бүтээгдэхүүний шинэ дотоод кодыг хадгална уу."}));return}
    let pid=productId;if(!pid){pid=await ensureDraft();if(!pid)return}
    setSaving(true);setError("");
    const payload={product_id:pid,name:v.name.trim(),color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
@@ -65,7 +66,7 @@ export default function AdminProductEditor(){
    if(!supabase)return null;
    for(const v of variants){
      if(v._deleted){if(v.id){const {error}=await supabase.from("product_variants").delete().eq("id",v.id);if(error)return error}continue}
-     const payload={product_id:productId,name:v.name.trim()||"Хувилбар",color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price)||0,active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
+     const payload={product_id:productId,name:v.name.trim(),color:null,sku:`${form.internal_reference.trim().toUpperCase()}-${v.sku.trim().toUpperCase()}`,price:Number(v.price),active:v.active,made_to_order:v.made_to_order,lead_time_days:v.made_to_order&&v.lead_time_days?Number(v.lead_time_days):null,display_order:v.display_order};
      if(v.id){const {error}=await supabase.from("product_variants").update(payload).eq("id",v.id);if(error)return error}
      else {const {data,error}=await supabase.from("product_variants").insert(payload).select("id").single();if(error)return error;if(data)v.id=data.id}
    }
@@ -140,6 +141,8 @@ export default function AdminProductEditor(){
      const problems=publicationProblems();
      if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
+   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!v.sku.trim()||!Number.isFinite(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
+   if(invalidVariant){showError("Хувилбар бүрийн нэр, дотоод код болон үнийг шалгана уу. Нийтлэх хувилбарын үнэ 0-ээс их байх ёстой.");return}
    const newRef=form.internal_reference.trim().toUpperCase();
    const generatedSlug=slugify(newRef);
    if(!generatedSlug){showError("Дотоод код оруулна уу.");return}
