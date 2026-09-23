@@ -195,7 +195,6 @@ export default function AdminProductEditor(){
  if(loading)return <main className="admin-content"><p>Уншиж байна…</p></main>;
  return <main className="admin-content" ref={topRef}><div className="admin-editor-head"><div><Link to="/admin/products">← Бүтээгдэхүүн</Link><p className="admin-kicker">MEIRO / ADMIN</p><h1>{creating?"Шинэ бүтээгдэхүүн":form.name||"Бүтээгдэхүүн"}</h1></div><button form="product-form" className="admin-primary" disabled={saving}>{saving?"Хадгалж байна…":"Хадгалах"}</button></div>
  {error&&<p className="admin-error admin-message">{error}</p>}{saved&&<p className="admin-success admin-message">Өөрчлөлт хадгалагдлаа.</p>}
- <p className="admin-message" role="note">Нэр, үнэ, дотоод код болон бусад үндсэн өөрчлөлтийг <strong>«Хадгалах»</strong> товчоор хамт хадгална. Харин зураг нэмэх, хасах, хувилбар устгах болон хувилбарын тусдаа «Хадгалах» товч дармагц өөрчлөлт шууд хадгалагдана.</p>
  <form id="product-form" className="admin-editor" onSubmit={save}>
   <section className="admin-panel"><h2>Үндсэн мэдээлэл</h2><div className="admin-fields">
    <div className="admin-name-code-row"><label>Нэр<input value={form.name} onChange={e=>set("name",e.target.value)} required /></label><label>Дотоод код<input value={form.internal_reference} onChange={e=>set("internal_reference",e.target.value.toUpperCase())} placeholder="Жишээ: NHG" required /></label></div>
