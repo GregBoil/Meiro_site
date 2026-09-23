@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 type Category={id:string;name:string};
-type Variant={id?:string;name:string;color:string;sku:string;price:number;active:boolean;made_to_order:boolean;lead_time_days:number|null;display_order:number;quantity_on_hand:number;quantity_reserved:number;low_stock_threshold:number;track_inventory:boolean;_deleted?:boolean};
+type Variant={id?:string;name:string;color:string;sku:string;price:number|string;active:boolean;made_to_order:boolean;lead_time_days:number|null;display_order:number;quantity_on_hand:number;quantity_reserved:number;low_stock_threshold:number;track_inventory:boolean;_deleted?:boolean};
 type ProductImage={id:string;variant_id:string|null;media_id:string;is_primary:boolean;display_order:number;media:{storage_path:string;filename:string;alt_text:string|null}|null};
 type Form={name:string;slug:string;internal_reference:string;short_description:string;description:string;material:string;dimensions:string;category_id:string;status:"draft"|"published"|"hidden";featured:boolean;custom_order_available:boolean;custom_order_note:string;display_order:number};
 const empty:Form={name:"",slug:"",internal_reference:"",short_description:"",description:"",material:"",dimensions:"",category_id:"",status:"draft",featured:false,custom_order_available:false,custom_order_note:"",display_order:0};
@@ -31,7 +31,7 @@ export default function AdminProductEditor(){
    if(error)setError(error.message); else if(data){setCategories(x=>[...x,data as Category]);set("category_id",data.id);setNewCategory("");}
    setAddingCategory(false);
  }
- function addVariant(){setVariants(v=>[...v,{name:"",color:"",sku:"",price:0,active:true,made_to_order:false,lead_time_days:null,display_order:v.filter(x=>!x._deleted).length,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
+ function addVariant(){setVariants(v=>[...v,{name:"",color:"",sku:"",price:"",active:true,made_to_order:false,lead_time_days:null,display_order:v.filter(x=>!x._deleted).length,quantity_on_hand:0,quantity_reserved:0,low_stock_threshold:2,track_inventory:true}])}
  function updateVariant(i:number,patch:Partial<Variant>){setVariants(v=>v.map((x,j)=>j===i?{...x,...patch}:x));setVariantErrors(e=>{if(!e[i])return e;const n={...e};delete n[i];return n})}
  async function removeVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v)return;
@@ -53,7 +53,7 @@ export default function AdminProductEditor(){
  }
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
-   if(!v.name.trim()||!v.sku.trim()||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
+   if(!v.name.trim()||!v.sku.trim()||String(v.price).trim()===""||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
    if(productId&&form.internal_reference.trim().toUpperCase()!==originalInternalReference){setVariantErrors(e=>({...e,[i]:"Эхлээд бүтээгдэхүүний шинэ дотоод кодыг хадгална уу."}));return}
    let pid=productId;if(!pid){pid=await ensureDraft();if(!pid)return}
    setSaving(true);setError("");
@@ -131,7 +131,7 @@ export default function AdminProductEditor(){
      const problems=publicationProblems();
      if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
-   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!/^[A-Z0-9]+$/.test(v.sku.trim().toUpperCase())||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
+   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!/^[A-Z0-9]+$/.test(v.sku.trim().toUpperCase())||String(v.price).trim()===""||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
    if(invalidVariant){showError("Хувилбар бүрийн нэр, дотоод код болон үнийг шалгана уу. Нийтлэх хувилбарын үнэ 0-ээс их байх ёстой.");return}
    if(variants.some(v=>v._deleted)){showError("Устгах хувилбарыг эхлээд тусад нь устгана уу.");return}
    const newRef=form.internal_reference.trim().toUpperCase();
@@ -206,7 +206,7 @@ export default function AdminProductEditor(){
   <section className="admin-panel admin-variants-panel"><div className="admin-section-head"><div><h2>Хувилбарууд</h2><p>Хувилбар, үнэ болон дотоод кодыг энд удирдана.</p></div></div>
    <div className="admin-variants">{variants.map((v,i)=>v._deleted?null:<div className="admin-variant" key={v.id??i}>
     <div className="admin-variant-top"><div><strong>{v.name||"Шинэ хувилбар"}{form.internal_reference&&v.sku&&<span className="admin-variant-title-code"> · {form.internal_reference.toUpperCase()}-{v.sku}</span>}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
-    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})} placeholder="Жишээ: BLU" required/></label><label>Үнэ (₮)<input type="number" min="0" step="1" value={v.price} onChange={e=>updateVariant(i,{price:Number(e.target.value)})} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
+    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})} placeholder="Жишээ: BLU" required/></label><label>Үнэ (₮)<input type="text" inputMode="numeric" pattern="[0-9]*" value={v.price} onChange={e=>{const value=e.target.value;if(/^\\d*$/.test(value))updateVariant(i,{price:value})}} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
     <div className="admin-variant-options"><label className="admin-check"><input type="checkbox" checked={v.active} onChange={e=>updateVariant(i,{active:e.target.checked})}/> Идэвхтэй</label><label className="admin-check"><input type="checkbox" checked={v.made_to_order} onChange={e=>updateVariant(i,{made_to_order:e.target.checked})}/> Захиалгаар хийх</label>{v.made_to_order&&<label>Хийх хугацаа (хоног)<input type="number" min="1" value={v.lead_time_days??""} onChange={e=>updateVariant(i,{lead_time_days:e.target.value?Number(e.target.value):null})}/></label>}</div>
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}<button type="button" className="admin-secondary admin-add-variant-bottom" onClick={addVariant}>+ Хувилбар нэмэх</button>
   </section>
