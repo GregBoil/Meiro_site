@@ -6,6 +6,7 @@ type Availability = ProductVariant["availability"];
 type VariantRow = {
   id: string;
   name: string;
+  sku: string;
   color: string | null;
   price: number;
   active: boolean;
@@ -26,6 +27,7 @@ type ImageRow = {
 type ProductRow = {
   id: string;
   slug: string;
+  internal_reference: string | null;
   name: string;
   description: string | null;
   short_description: string | null;
@@ -58,6 +60,7 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
     .map((variant) => ({
       id: variant.id,
       name: variant.name,
+      sku: variant.sku,
       stock: null,
       priceMnt: variant.price,
       color: variant.color,
@@ -94,6 +97,7 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
   return {
     id: row.id,
     slug: row.slug,
+    internalReference: row.internal_reference ?? "",
     name: row.name,
     category: row.category?.slug ?? "all",
     description: row.description ?? row.short_description ?? "",
@@ -117,13 +121,14 @@ export async function getPublishedProducts(): Promise<Product[]> {
       `
       id,
       slug,
+      internal_reference,
       name,
       description,
       short_description,
       material,
       featured,
       category:categories(slug),
-      product_variants(id,name,color,price,active,display_order),
+      product_variants(id,name,sku,color,price,active,display_order),
       product_images(id,variant_id,is_primary,display_order,media(storage_path,alt_text))
       `,
     )
