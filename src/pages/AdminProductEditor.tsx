@@ -168,6 +168,7 @@ export default function AdminProductEditor(){
        if(pe||!data){showError(productErrorMessage(pe));return}
        pid=data.id;setProductId(pid);setOriginalInternalReference(newRef);
      }
+     if(!pid){showError("Бүтээгдэхүүнийг хадгалж чадсангүй.");return}
      const ve=await saveVariants(pid);
      if(ve){showError("Хувилбарыг хадгалж чадсангүй. Бүтээгдэхүүн ноорог төлөвт үлдлээ. "+ve.message);return}
      if(form.status==="published"){
