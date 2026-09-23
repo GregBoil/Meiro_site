@@ -83,6 +83,7 @@ export default function Product() {
         <div className="product-detail-copy">
           <p className="eyebrow">MEIRO / БҮТЭЭЛ</p>
           <h1>{product.name}</h1>
+          {(selectedVariant?.sku || product.internalReference) && <p className="product-reference">Код: {selectedVariant?.sku || product.internalReference}</p>}
           <p className="product-price">{formatPrice(shownPrice)}</p>
           <p>{product.description}</p>
 
