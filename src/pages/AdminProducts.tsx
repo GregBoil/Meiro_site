@@ -47,9 +47,9 @@ export default function AdminProducts(){
     </article>})}{rows.length===0&&<p className="admin-state">Бүтээгдэхүүн алга байна.</p>}</div>}
     {!loading&&<section className="admin-panel" style={{marginTop:32}}><div className="admin-section-head"><div><h2>Ангиллууд</h2><p>Бүтээгдэхүүнгүй ангиллыг эндээс устгаж болно.</p></div></div>
       {categoryError&&<p className="admin-error">{categoryError}</p>}
-      {categories.length===0?<p className="admin-state">Ангилал алга байна.</p>:<div className="admin-product-list">{categories.map(category=><div className="admin-product-row" key={category.id}>
-        <div className="admin-product-name"><strong>{category.name}</strong><small>{category.productCount} бүтээгдэхүүн</small></div>
-        <button type="button" className="admin-secondary" disabled={category.productCount>0||deletingCategory!==null} title={category.productCount>0?"Бүтээгдэхүүнтэй ангиллыг устгах боломжгүй.":"Ангилал устгах"} onClick={()=>deleteCategory(category)}>{deletingCategory===category.id?"Устгаж байна…":"Устгах"}</button>
+      {categories.length===0?<p className="admin-state">Ангилал алга байна.</p>:<div className="admin-product-list">{categories.map(category=><div className="admin-product-row" key={category.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:16,flex:"1 1 auto",minWidth:0,flexWrap:"wrap"}}><strong>{category.name}</strong><span style={{whiteSpace:"nowrap",opacity:0.7}}>{category.productCount} бүтээгдэхүүн</span></div>
+        <button type="button" className="admin-secondary" style={{flexShrink:0}} disabled={category.productCount>0||deletingCategory!==null} title={category.productCount>0?"Бүтээгдэхүүнтэй ангиллыг устгах боломжгүй.":"Ангилал устгах"} onClick={()=>deleteCategory(category)}>{deletingCategory===category.id?"Устгаж байна…":"Устгах"}</button>
       </div>)}</div>}
     </section>}
   </main>;
