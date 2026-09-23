@@ -5,6 +5,7 @@ export interface ProductVariant {
   name: string;
   stock: number | null;
   priceMnt: number | null;
+  sku: string;
   color?: string | null;
   availability?: "available" | "low_stock" | "sold_out" | "made_to_order" | null;
 }
@@ -12,6 +13,7 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   slug: string;
+  internalReference: string;
   name: string;
   category: string;
   description: string;
