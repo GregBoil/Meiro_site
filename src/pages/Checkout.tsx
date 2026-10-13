@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../commerce/CartProvider";
@@ -44,6 +44,12 @@ function CheckoutForm({ userId }: { userId: string }) {
   const [saveError, setSaveError] = useState(false);
   const [saved, setSaved] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [reviewing, setReviewing] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (reviewing) headingRef.current?.focus();
+  }, [reviewing]);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +74,7 @@ function CheckoutForm({ userId }: { userId: string }) {
     setLoading(true);
     setPreview(null);
     setPreviewError(false);
+    setReviewing(false);
     if (!items.length) {
       setLoading(false);
       return;
@@ -97,7 +104,15 @@ function CheckoutForm({ userId }: { userId: string }) {
   }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (busy || addressLoading || addressError) return;
+    if (
+      busy ||
+      addressLoading ||
+      addressError ||
+      loading ||
+      !preview ||
+      previewError
+    )
+      return;
     if (
       !address.recipient_name.trim() ||
       !address.phone.trim() ||
@@ -116,6 +131,7 @@ function CheckoutForm({ userId }: { userId: string }) {
     try {
       await saveDeliveryAddress(userId, address);
       setSaved(true);
+      setReviewing(true);
     } catch {
       setSaveError(true);
     } finally {
@@ -135,7 +151,18 @@ function CheckoutForm({ userId }: { userId: string }) {
   return (
     <section className="page-shell cart-page checkout-page">
       <p className="eyebrow">MEIRO</p>
-      <h1>Захиалгын мэдээлэл</h1>
+      <h1 ref={headingRef} tabIndex={-1}>
+        {reviewing ? "Захиалгаа хянах" : "Захиалгын мэдээлэл"}
+      </h1>
+      <p className="checkout-steps" aria-label="Захиалгын алхмууд">
+        <span aria-current={!reviewing ? "step" : undefined}>
+          1. Хүргэлтийн хаяг
+        </span>
+        <span aria-current={reviewing ? "step" : undefined}>
+          2. Захиалгаа хянах
+        </span>
+        <span>3. Төлбөр</span>
+      </p>
       <Link className="text-link" to="/cart">
         Сагс руу буцах →
       </Link>
@@ -145,7 +172,48 @@ function CheckoutForm({ userId }: { userId: string }) {
           <p className="checkout-area">
             Одоогоор зөвхөн Улаанбаатар хотод хүргэнэ.
           </p>
-          {addressLoading ? (
+          {reviewing ? (
+            <>
+              <dl className="checkout-address">
+                <div>
+                  <dt>Хүлээн авагч</dt>
+                  <dd>{address.recipient_name}</dd>
+                </div>
+                <div>
+                  <dt>Утасны дугаар</dt>
+                  <dd>{address.phone}</dd>
+                </div>
+                <div>
+                  <dt>Хот</dt>
+                  <dd>Улаанбаатар</dd>
+                </div>
+                <div>
+                  <dt>Дүүрэг, хороо</dt>
+                  <dd>
+                    {address.district}, {address.khoroo}-р хороо
+                  </dd>
+                </div>
+                <div>
+                  <dt>Дэлгэрэнгүй хаяг</dt>
+                  <dd>{address.address_line}</dd>
+                </div>
+                {address.instructions.trim() && (
+                  <div>
+                    <dt>Нэмэлт тайлбар</dt>
+                    <dd>{address.instructions}</dd>
+                  </div>
+                )}
+              </dl>
+              <button
+                type="button"
+                className="button account-secondary"
+                onClick={() => setReviewing(false)}
+              >
+                Хаяг өөрчлөх
+              </button>
+              <p>Мэдээллээ шалгаад төлбөрийн алхам руу шилжинэ үү.</p>
+            </>
+          ) : addressLoading ? (
             <p role="status">Хаяг ачаалж байна…</p>
           ) : addressError ? (
             <>
@@ -257,15 +325,20 @@ function CheckoutForm({ userId }: { userId: string }) {
               <button
                 className="button account-secondary"
                 type="submit"
-                disabled={busy}
+                disabled={busy || loading || previewError || !preview}
               >
-                {busy ? "Хадгалж байна…" : "Хаяг хадгалах"}
+                {busy ? "Хадгалж байна…" : "Хадгалаад захиалгаа хянах"}
               </button>
             </form>
           )}
         </div>
         <aside className="cart-summary">
           <h2>Захиалгын тойм</h2>
+          {reviewing && (
+            <Link className="text-link" to="/cart">
+              Бүтээл, тоо хэмжээ өөрчлөх →
+            </Link>
+          )}
           {loading ? (
             <p role="status">Үнэ, бэлэн байдлыг шалгаж байна…</p>
           ) : previewError ? (
@@ -338,10 +411,14 @@ function CheckoutForm({ userId }: { userId: string }) {
               </>
             )
           )}
-          <p>Захиалга, төлбөрийн үйлчилгээ удахгүй нээгдэнэ.</p>
-          <button className="button button-primary" disabled type="button">
-            Захиалга баталгаажуулах
-          </button>
+          {reviewing && (
+            <>
+              <p>Захиалга, төлбөрийн үйлчилгээ удахгүй нээгдэнэ.</p>
+              <button className="button button-primary" disabled type="button">
+                Баталгаажуулаад төлбөр төлөх
+              </button>
+            </>
+          )}
         </aside>
       </div>
     </section>

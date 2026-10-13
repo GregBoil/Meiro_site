@@ -4,6 +4,31 @@
 .checkout-area {
   margin: 18px 0 24px;
 }
+.checkout-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  color: var(--taupe);
+  font-size: 14px;
+}
+.checkout-steps [aria-current="step"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+.checkout-address {
+  display: grid;
+  gap: 18px;
+  margin: 24px 0;
+  overflow-wrap: anywhere;
+}
+.checkout-address dt {
+  color: var(--taupe);
+  font-size: 14px;
+}
+.checkout-address dd {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
 .checkout-page .account-form select,
 .checkout-page .account-form textarea {
   width: 100%;
