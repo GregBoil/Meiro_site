@@ -458,6 +458,7 @@ function CustomerProfile({ userId, email }: { userId: string; email: string }) {
         </>
       )}
       <div className="account-links">
+        <Link to="/account/orders">Миний захиалгууд</Link>
         <Link to="/account/reset-password">Нууц үг солих</Link>
         <button type="button" onClick={signOut} disabled={busy}>
           Гарах

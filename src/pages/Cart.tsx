@@ -8,7 +8,12 @@ import { useAuth } from "../auth/AuthProvider";
 
 export default function Cart() {
   const { session, loading } = useAuth();
-  if (loading) return <section className="page-shell cart-page"><p role="status">Уншиж байна…</p></section>;
+  if (loading)
+    return (
+      <section className="page-shell cart-page">
+        <p role="status">Уншиж байна…</p>
+      </section>
+    );
   if (!session) return <Navigate to="/account/login" replace />;
   return <AuthenticatedCart />;
 }
@@ -165,6 +170,11 @@ function AuthenticatedCart() {
               </p>
             )}
             <p>Захиалга, төлбөрийн үйлчилгээ удахгүй нээгдэнэ.</p>
+            {!invalid && (
+              <Link className="button button-primary" to="/checkout">
+                Хаяг, захиалгын тойм →
+              </Link>
+            )}
             {!session && (
               <Link className="text-link" to="/account/login">
                 Бүртгэлдээ нэвтрэх →

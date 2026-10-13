@@ -20,6 +20,8 @@ export default function Layout() {
       "/catalogue": "Бүтээлүүд",
       "/contact": "Холбоо барих",
       "/cart": "Миний сагс",
+      "/checkout": "Захиалгын мэдээлэл",
+      "/account/orders": "Миний захиалгууд",
       "/account": "Миний бүртгэл",
       "/account/login": "Нэвтрэх",
       "/account/signup": "Бүртгүүлэх",
@@ -67,9 +69,18 @@ export default function Layout() {
           ))}
           <NavLink to="/account">{accountLabel}</NavLink>
           {session && (
-            <NavLink to="/cart" className="cart-nav-link" aria-label={`Миний сагс, ${count} бүтээл`} title="Миний сагс">
+            <NavLink
+              to="/cart"
+              className="cart-nav-link"
+              aria-label={`Миний сагс, ${count} бүтээл`}
+              title="Миний сагс"
+            >
               <ShoppingCart size={23} aria-hidden="true" />
-              {count > 0 && <span className="cart-count" aria-hidden="true">{count}</span>}
+              {count > 0 && (
+                <span className="cart-count" aria-hidden="true">
+                  {count}
+                </span>
+              )}
             </NavLink>
           )}
         </nav>
@@ -104,9 +115,19 @@ export default function Layout() {
               <ArrowUpRight size={22} />
             </NavLink>
             {session && (
-              <NavLink to="/cart" className="cart-nav-link" onClick={() => setMenuOpen(false)} aria-label={`Миний сагс, ${count} бүтээл`} title="Миний сагс">
+              <NavLink
+                to="/cart"
+                className="cart-nav-link"
+                onClick={() => setMenuOpen(false)}
+                aria-label={`Миний сагс, ${count} бүтээл`}
+                title="Миний сагс"
+              >
                 <ShoppingCart size={25} aria-hidden="true" />
-                {count > 0 && <span className="cart-count" aria-hidden="true">{count}</span>}
+                {count > 0 && (
+                  <span className="cart-count" aria-hidden="true">
+                    {count}
+                  </span>
+                )}
               </NavLink>
             )}
           </nav>

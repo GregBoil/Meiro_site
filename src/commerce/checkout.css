@@ -1,0 +1,69 @@
+.checkout-layout {
+  margin-top: 30px;
+}
+.checkout-area {
+  margin: 18px 0 24px;
+}
+.checkout-page .account-form select,
+.checkout-page .account-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 0;
+}
+.checkout-page .account-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.checkout-line {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+.checkout-totals {
+  margin: 0;
+  display: grid;
+  gap: 16px;
+}
+.checkout-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.checkout-totals dd {
+  margin: 0;
+  text-align: right;
+}
+.orders-empty {
+  margin-top: 30px;
+}
+.orders-list {
+  display: grid;
+  gap: 24px;
+  margin-top: 30px;
+}
+.order-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: white;
+  overflow-wrap: anywhere;
+}
+.order-card h2 {
+  font-size: 26px;
+}
+.order-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.order-heading span {
+  font-size: 13px;
+  color: var(--taupe);
+}
+.order-card ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}

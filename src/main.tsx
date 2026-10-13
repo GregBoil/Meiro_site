@@ -21,9 +21,13 @@ import { prepareAuthCallback } from "./auth/callback";
 import { supabase } from "./services/supabase";
 import { CartProvider } from "./commerce/CartProvider";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import AdminOrders from "./pages/AdminOrders";
 import "./styles.css";
 import "./auth/account.css";
 import "./commerce/cart.css";
+import "./commerce/checkout.css";
 
 const Router =
   import.meta.env.MODE === "github-pages" ? HashRouter : BrowserRouter;
@@ -46,6 +50,7 @@ async function start() {
             <Routes>
               <Route path="admin" element={<Admin />}>
                 <Route index element={<AdminDashboard />} />
+                <Route path="orders" element={<AdminOrders />} />
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="products/:id" element={<AdminProductEditor />} />
                 <Route path="inventory" element={<AdminInventory />} />
@@ -63,6 +68,8 @@ async function start() {
                 <Route path="catalogue/:slug" element={<Product />} />
                 <Route path="contact" element={<Contact />} />
                 <Route path="cart" element={<Cart />} />
+                <Route path="checkout" element={<Checkout />} />
+                <Route path="account/orders" element={<Orders />} />
                 <Route path="account" element={<Account />} />
                 <Route
                   path="account/login"

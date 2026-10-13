@@ -43,7 +43,7 @@ export default function Admin() {
   if (!authorized) return <main className="admin-login"><div className="admin-login-card"><p className="admin-kicker">MEIRO / ADMIN</p><h1>Хандах эрхгүй</h1><p>Энэ хэрэглэгч админы эрхгүй байна.</p><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></div></main>;
 
   return <div className={`admin-shell ${menuOpen?"menu-open":""}`}><header className="admin-mobile-bar"><div><strong>MEIRO</strong><span>ADMIN</span></div><button type="button" aria-label="Цэс" aria-expanded={menuOpen} onClick={()=>setMenuOpen(v=>!v)}>{menuOpen?"×":"☰"}</button></header>{menuOpen&&<button className="admin-menu-backdrop" aria-label="Цэс хаах" onClick={()=>setMenuOpen(false)}/>}<aside className="admin-sidebar"><strong>MEIRO</strong><span>ADMIN</span><nav onClick={()=>setMenuOpen(false)}>
-    <NavLink end to="/admin">Хянах самбар</NavLink><NavLink to="/admin/products">Бүтээгдэхүүн</NavLink>
+    <NavLink end to="/admin">Хянах самбар</NavLink><NavLink to="/admin/orders">Захиалгууд</NavLink><NavLink to="/admin/products">Бүтээгдэхүүн</NavLink>
     <NavLink to="/admin/inventory">Нөөц</NavLink><NavLink to="/admin/media">Медиа</NavLink><NavLink to="/admin/collections">Цуглуулга</NavLink><NavLink to="/admin/home">Нүүр хуудас</NavLink><span>Тохиргоо</span>
   </nav><button onClick={()=>supabase?.auth.signOut()}>Гарах</button></aside><Outlet /></div>;
 }

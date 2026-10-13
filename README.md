@@ -72,7 +72,53 @@ vérifier leur règlement côté serveur avec traitement idempotent des notifica
 Les secrets de paiement restent côté serveur. Les variantes et quantités du panier
 doivent être validées côté serveur avant toute commande.
 
-## Comptes clients
+## Préparation des commandes — Ulaanbaatar
+
+La page `/checkout` est réservée aux comptes connectés. Elle préremplit le nom et
+le téléphone depuis le profil, puis réutilise l'adresse de livraison enregistrée.
+La ville est fixée à Ulaanbaatar ; le client renseigne district, khoroo, adresse
+détaillée et instructions facultatives. L'enregistrement de l'adresse ne crée
+aucune commande.
+
+Avant de tester cette étape, exécuter une fois la migration
+`supabase/migrations/20261013080000_order_preparation.sql` dans Supabase SQL Editor
+avec le rôle postgres. Elle crée `customer_delivery_addresses`, `shipping_settings`,
+`orders`, `order_items` et la fonction `meiro_checkout_preview`. Si l'une de ces
+tables existe déjà, la migration s'arrête sans l'écraser ; examiner le schéma avant
+de l'adapter. Elle ne modifie pas le stock existant.
+
+Le récapitulatif est calculé côté Supabase à partir des variantes actives des
+produits publiés. Le serveur vérifie le stock disponible (`on_hand - reserved`)
+pour les variantes suivies et autorise les variantes fabriquées sur commande.
+Les prix envoyés par le navigateur sont ignorés. Aucun stock n'est réservé par
+ce récapitulatif : prix et disponibilité devront être revérifiés à la création
+transactionnelle de la commande.
+
+Les frais de livraison valent NULL tant qu'ils ne sont pas définis : aucun
+montant total payable n'est inventé. Le bouton de confirmation reste désactivé,
+y compris lorsqu'un tarif est renseigné. Aucune fonction de création de commande,
+de paiement ou de changement de statut n'est activée dans cette étape.
+
+`/account/orders` affiche les commandes du client ; `/admin/orders` affiche celles
+accessibles à l'administrateur. Les tables sont en lecture seule pour les clients
+et les administrateurs via le navigateur. Les futurs services de paiement et de
+livraison devront réaliser les écritures autorisées côté serveur. Les données
+d'articles seront copiées dans chaque commande pour conserver les prix et noms
+historiques. Les commandes sont conservées si un compte ou une variante est supprimé.
+
+Avant l'ouverture des achats : fixer la couverture et les frais UBCab, intégrer
+Bonum, créer les commandes avec réservation atomique/idempotence et expiration,
+libérer les réservations après annulation/expiration, confirmer les paiements
+vérifiés et gérer les étapes de préparation et d'expédition. Les 9 districts
+administratifs sont proposés pour l'adresse ; la couverture réelle d'UBCab
+doit être confirmée et limitée avant activation.
+
+Le test `order-preparation.test.mjs` exécute la migration sur PostgreSQL embarqué
+(PGlite), avec un schéma catalogue minimal et des identités simulées. Il vérifie
+les calculs, les droits par utilisateur, les droits administrateur, les refus
+d'écriture et la limite de livraison. Il ne teste pas la base Supabase réelle.
+
+## Configuration des comptes clients
 
 Les routes `/account`, `/account/login`, `/account/signup`,
 `/account/forgot-password` et `/account/reset-password` utilisent le client
