@@ -45,11 +45,32 @@ Sans `VITE_CONTACT_ENDPOINT`, l'envoi est désactivé et le visiteur est orient�
 
 Le corps JSON contient `name`, `contact`, `subject` et `message`. Les secrets du fournisseur d'envoi doivent rester côté serveur. Aucun message ou donnée personnelle n'est enregistré dans le navigateur.
 
-## Extension commerce / QPay
+## Panier et extension commerce / Bonum
 
-L'interface `CheckoutService` constitue un point d'intégration futur, pas une implémentation QPay. Les helpers de panier sont testés mais ne sont pas exposés aux visiteurs pendant la phase de présentation.
+L'interface `CheckoutService` constitue un point d'intégration futur, pas une implémentation de paiement. Bonum est le prestataire prévu pour la prochaine étape.
 
-Pour activer le commerce : ajouter un contexte panier et son interface ; relier `loadCart` / `saveCart` ; vérifier la disponibilité des articles au chargement ; créer un backend de commandes et implémenter le contrat de checkout. Le serveur devra recalculer les montants depuis une source fiable, contrôler les stocks, créer les factures via l'API officielle QPay et vérifier les paiements côté serveur avec traitement idempotent des notifications. Ne jamais placer de secrets QPay dans des variables `VITE_*`. Les variantes et la quantité du panier ne doivent pas être considérées comme fiables sans validation serveur.
+Le panier est accessible via `/cart` et les fiches produit. Une variante précise
+est requise ; couleur et matériau sont affichés. Les variantes épuisées, sans prix
+valide ou sans disponibilité connue ne peuvent pas être ajoutées. Les variantes
+`made_to_order` restent sélectionnables et sont identifiées comme telles.
+Le navigateur conserve uniquement identifiants et quantités dans `meiro.cart.v1`.
+Le panier reste présent après connexion et déconnexion et se synchronise entre
+onglets ; il n'est pas synchronisé entre appareils. Un message signale les échecs
+de stockage.
+
+À l'ouverture du panier, prix et disponibilité sont relus depuis le catalogue.
+Les lignes devenues indisponibles restent visibles, peuvent être retirées et sont
+exclues du total. Le total concerne les articles, sans frais de livraison.
+Le panier ne réserve pas de stock et ne crée pas de commande. L'API catalogue
+expose un statut de disponibilité, sans quantité exacte : le plafond de 99 par
+variante est une limite d'interface, pas une promesse de stock.
+
+Pour activer les achats : créer un backend de commandes et intégrer Bonum.
+Le serveur devra recalculer les montants depuis une source fiable, contrôler et
+réserver les stocks dans une transaction, créer les demandes de paiement puis
+vérifier leur règlement côté serveur avec traitement idempotent des notifications.
+Les secrets de paiement restent côté serveur. Les variantes et quantités du panier
+doivent être validées côté serveur avant toute commande.
 
 ## Comptes clients
 

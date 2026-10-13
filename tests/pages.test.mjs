@@ -12,12 +12,14 @@ test("all public page templates render with real routes and honest preview state
   const names = ["Home", "Catalogue", "Product", "Contact", "NotFound"];
   const output = await build({
     stdin: {
-      contents: names
-        .map(
-          (name) =>
-            `export { default as ${name} } from './src/pages/${name}.tsx';`,
-        )
-        .join("\n"),
+      contents:
+        "export { CartProvider } from './src/commerce/CartProvider.tsx';\n" +
+        names
+          .map(
+            (name) =>
+              `export { default as ${name} } from './src/pages/${name}.tsx';`,
+          )
+          .join("\n"),
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -41,9 +43,24 @@ test("all public page templates render with real routes and honest preview state
     const scenarios = [
       ["Home", "/", "/", "Өөрийн"],
       ["Catalogue", "/catalogue", "/catalogue", "Каталог ачаалж байна…"],
-      ["Catalogue", "/catalogue?category=bags", "/catalogue", "Каталог ачаалж байна…"],
-      ["Product", "/catalogue/everyday-bag", "/catalogue/:slug", "Бүтээл ачаалж байна…"],
-      ["Product", "/catalogue/unknown", "/catalogue/:slug", "Бүтээл ачаалж байна…"],
+      [
+        "Catalogue",
+        "/catalogue?category=bags",
+        "/catalogue",
+        "Каталог ачаалж байна…",
+      ],
+      [
+        "Product",
+        "/catalogue/everyday-bag",
+        "/catalogue/:slug",
+        "Бүтээл ачаалж байна…",
+      ],
+      [
+        "Product",
+        "/catalogue/unknown",
+        "/catalogue/:slug",
+        "Бүтээл ачаалж байна…",
+      ],
       ["Contact", "/contact", "/contact", "Зурвас илгээх"],
       ["NotFound", "/missing", "*", "404"],
     ];
@@ -58,7 +75,11 @@ test("all public page templates render with real routes and honest preview state
             null,
             React.createElement(Route, {
               path: route,
-              element: React.createElement(Page),
+              element: React.createElement(
+                pages.CartProvider,
+                null,
+                React.createElement(Page),
+              ),
             }),
           ),
         ),

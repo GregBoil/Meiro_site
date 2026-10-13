@@ -3,9 +3,11 @@ import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { navigation, socialLinks } from "../data/site";
 import { useAuth } from "../auth/AuthProvider";
+import { useCart } from "../commerce/CartProvider";
 
 export default function Layout() {
   const { session } = useAuth();
+  const { count } = useCart();
   const accountLabel = session ? "Миний бүртгэл" : "Нэвтрэх";
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
@@ -17,6 +19,7 @@ export default function Layout() {
       "/": "Өөрийн замаар.",
       "/catalogue": "Бүтээлүүд",
       "/contact": "Холбоо барих",
+      "/cart": "Миний сагс",
       "/account": "Миний бүртгэл",
       "/account/login": "Нэвтрэх",
       "/account/signup": "Бүртгүүлэх",
@@ -63,6 +66,7 @@ export default function Layout() {
             </NavLink>
           ))}
           <NavLink to="/account">{accountLabel}</NavLink>
+          <NavLink to="/cart">Сагс{count > 0 ? ` (${count})` : ""}</NavLink>
         </nav>
         <button
           className="icon-button menu-toggle"
@@ -92,6 +96,10 @@ export default function Layout() {
             ))}
             <NavLink to="/account" onClick={() => setMenuOpen(false)}>
               {accountLabel}
+              <ArrowUpRight size={22} />
+            </NavLink>
+            <NavLink to="/cart" onClick={() => setMenuOpen(false)}>
+              Сагс{count > 0 ? ` (${count})` : ""}
               <ArrowUpRight size={22} />
             </NavLink>
           </nav>

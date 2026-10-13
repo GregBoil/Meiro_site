@@ -1,4 +1,11 @@
-export interface ProductImage { id: string; url: string; alt: string; variantId: string | null; isPrimary: boolean; displayOrder: number; }
+export interface ProductImage {
+  id: string;
+  url: string;
+  alt: string;
+  variantId: string | null;
+  isPrimary: boolean;
+  displayOrder: number;
+}
 
 export interface ProductVariant {
   id: string;
@@ -7,7 +14,9 @@ export interface ProductVariant {
   priceMnt: number | null;
   sku: string;
   color?: string | null;
-  availability?: "available" | "low_stock" | "sold_out" | "made_to_order" | null;
+  material?: string | null;
+  availability?:
+    "available" | "low_stock" | "sold_out" | "made_to_order" | null;
 }
 
 export interface Product {
