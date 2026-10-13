@@ -30,6 +30,23 @@
   margin-bottom: 24px;
   color: var(--taupe);
 }
+.account-details {
+  margin: 0 0 20px;
+}
+.account-details > div {
+  display: grid;
+  gap: 6px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.account-details dt {
+  color: var(--taupe);
+  font-size: 13px;
+}
+.account-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .account-form {
   display: grid;
   gap: 20px;

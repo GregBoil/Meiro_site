@@ -271,6 +271,7 @@ export default function Account() {
 
 function CustomerProfile({ userId, email }: { userId: string; email: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
@@ -328,6 +329,9 @@ function CustomerProfile({ userId, email }: { userId: string; email: string }) {
         .single();
       if (error || !data) throw new Error();
       setProfile(data);
+      setName(data.full_name ?? "");
+      setPhone(data.phone ?? "");
+      setEditing(false);
       setMessage("Мэдээлэл хадгалагдлаа.");
     } catch {
       setError("Мэдээллийг хадгалж чадсангүй. Дахин оролдоно уу.");
@@ -359,7 +363,32 @@ function CustomerProfile({ userId, email }: { userId: string; email: string }) {
         <p role="status">Уншиж байна…</p>
       ) : (
         <>
-          {profile && (
+          {profile && !editing && (
+            <>
+              <dl className="account-details">
+                <div>
+                  <dt>Нэр</dt>
+                  <dd>{profile.full_name || "Оруулаагүй"}</dd>
+                </div>
+                <div>
+                  <dt>Утас</dt>
+                  <dd>{profile.phone || "Оруулаагүй"}</dd>
+                </div>
+              </dl>
+              <button
+                className="button account-secondary"
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setMessage("");
+                  setEditing(true);
+                }}
+              >
+                Мэдээлэл засах
+              </button>
+            </>
+          )}
+          {profile && editing && (
             <form className="account-form" onSubmit={save} aria-busy={busy}>
               <label htmlFor="profile-name">
                 Нэр
@@ -391,6 +420,20 @@ function CustomerProfile({ userId, email }: { userId: string; email: string }) {
                 type="submit"
               >
                 {busy ? "Түр хүлээнэ үү…" : "Хадгалах"}
+              </button>
+              <button
+                className="button account-secondary"
+                disabled={busy}
+                type="button"
+                onClick={() => {
+                  setName(profile.full_name ?? "");
+                  setPhone(profile.phone ?? "");
+                  setError("");
+                  setMessage("");
+                  setEditing(false);
+                }}
+              >
+                Болих
               </button>
             </form>
           )}
