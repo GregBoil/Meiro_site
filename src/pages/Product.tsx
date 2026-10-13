@@ -6,10 +6,12 @@ import ImagePlaceholder from "../components/ImagePlaceholder";
 import NotFound from "./NotFound";
 import { getPublishedProductBySlug } from "../services/products";
 import { useCart } from "../commerce/CartProvider";
+import { useAuth } from "../auth/AuthProvider";
 import { canPurchaseVariant, quantityLimit } from "../commerce/cart";
 
 export default function Product() {
   const cart = useCart();
+  const { session, loading: authLoading } = useAuth();
   const { slug } = useParams();
   const [product, setProduct] = useState<ProductType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,7 +205,11 @@ export default function Product() {
             </div>
           )}
 
-          <div className="product-cart-actions">
+          {authLoading ? <p role="status">Уншиж байна…</p> : !session ? (
+            <div className="product-cart-actions">
+              <Link className="button button-primary" to="/account/login">Нэвтэрч худалдан авах</Link>
+            </div>
+          ) : <div className="product-cart-actions">
             <label htmlFor="product-quantity">
               Тоо хэмжээ
               <select
@@ -262,7 +268,7 @@ export default function Product() {
                 Сагс энэ төхөөрөмжид хадгалагдахгүй байна.
               </p>
             )}
-          </div>
+          </div>}
 
           <Link
             className="button button-primary"

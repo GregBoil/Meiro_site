@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Product, ProductVariant } from "../data/products";
 import type { CartItem } from "./types";
+import { useAuth } from "../auth/AuthProvider";
 import {
   addCartItem,
   canPurchaseVariant,
@@ -33,6 +34,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
   const [items, setItems] = useState(loadCart);
   const [storageFailed, setStorageFailed] = useState(false);
   useEffect(() => {
@@ -47,6 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function add(product: Product, variant: ProductVariant, quantity: number) {
+    if (!session) return "Сагсанд нэмэхийн тулд нэвтэрнэ үү.";
     if (
       product.isPlaceholder ||
       !product.variants.some((v) => v.id === variant.id) ||

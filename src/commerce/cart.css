@@ -125,3 +125,8 @@
     text-align: right;
   }
 }
+
+/* An accessible basket icon replaces the text in both navigation menus. */
+.cart-nav-link { display: inline-flex; align-items: center; gap: 8px; }
+.cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 700; }
+.mobile-nav .cart-nav-link { justify-content: flex-start; }

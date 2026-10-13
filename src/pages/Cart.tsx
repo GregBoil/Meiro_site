@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useCart } from "../commerce/CartProvider";
 import { quantityLimit, resolveCart } from "../commerce/cart";
 import { formatPrice, type Product } from "../data/products";
@@ -7,6 +7,13 @@ import { getPublishedProducts } from "../services/products";
 import { useAuth } from "../auth/AuthProvider";
 
 export default function Cart() {
+  const { session, loading } = useAuth();
+  if (loading) return <section className="page-shell cart-page"><p role="status">Уншиж байна…</p></section>;
+  if (!session) return <Navigate to="/account/login" replace />;
+  return <AuthenticatedCart />;
+}
+
+function AuthenticatedCart() {
   const { items, changeQuantity, remove, storageFailed } = useCart();
   const { session } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
