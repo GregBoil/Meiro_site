@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { navigation, socialLinks } from "../data/site";
+import { useAuth } from "../auth/AuthProvider";
 
 export default function Layout() {
+  const { session } = useAuth();
+  const accountLabel = session ? "Миний бүртгэл" : "Нэвтрэх";
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -14,6 +17,11 @@ export default function Layout() {
       "/": "Өөрийн замаар.",
       "/catalogue": "Бүтээлүүд",
       "/contact": "Холбоо барих",
+      "/account": "Миний бүртгэл",
+      "/account/login": "Нэвтрэх",
+      "/account/signup": "Бүртгүүлэх",
+      "/account/forgot-password": "Нууц үг сэргээх",
+      "/account/reset-password": "Шинэ нууц үг",
     };
     document.title = `Meiro — ${titles[pathname] || "Бүтээл"}`;
   }, [pathname]);
@@ -54,6 +62,7 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
+          <NavLink to="/account">{accountLabel}</NavLink>
         </nav>
         <button
           className="icon-button menu-toggle"
@@ -81,6 +90,10 @@ export default function Layout() {
                 <ArrowUpRight size={22} />
               </NavLink>
             ))}
+            <NavLink to="/account" onClick={() => setMenuOpen(false)}>
+              {accountLabel}
+              <ArrowUpRight size={22} />
+            </NavLink>
           </nav>
         )}
       </header>

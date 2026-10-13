@@ -51,7 +51,43 @@ L'interface `CheckoutService` constitue un point d'intégration futur, pas une i
 
 Pour activer le commerce : ajouter un contexte panier et son interface ; relier `loadCart` / `saveCart` ; vérifier la disponibilité des articles au chargement ; créer un backend de commandes et implémenter le contrat de checkout. Le serveur devra recalculer les montants depuis une source fiable, contrôler les stocks, créer les factures via l'API officielle QPay et vérifier les paiements côté serveur avec traitement idempotent des notifications. Ne jamais placer de secrets QPay dans des variables `VITE_*`. Les variantes et la quantité du panier ne doivent pas être considérées comme fiables sans validation serveur.
 
-## Déploiement
+## Comptes clients
+
+Les routes `/account`, `/account/login`, `/account/signup`,
+`/account/forgot-password` et `/account/reset-password` utilisent le client
+Supabase existant. Les clients peuvent lire leur profil et modifier uniquement
+`full_name` et `phone`. La table `public.profiles` doit être créée avec une clé
+étrangère vers `auth.users`, un trigger de création et les règles RLS par utilisateur.
+La migration `supabase/migrations/20261013050000_customer_profiles.sql` a été
+exécutée séparément dans Supabase ; elle n'est pas exécutée par le frontend.
+Ne pas la réexécuter sur la base où `profiles` existe déjà.
+L'administration conserve son contrôle distinct via `admin_profiles`.
+
+L'inscription et la demande d'e-mail de récupération sont désactivées par défaut.
+Avant leur ouverture :
+
+1. Configurer le SMTP personnalisé et tester la délivrance des e-mails.
+2. Activer **Allow new users to sign up** et **Confirm Email** dans Supabase.
+3. Régler la longueur minimale du mot de passe sur 12 caractères.
+4. Mettre à jour **Site URL** et autoriser la racine exacte du site dans **Redirect URLs**.
+   Adresse provisoire : `https://gregboil.github.io/Meiro_site/`.
+5. Activer `VITE_AUTH_EMAILS_ENABLED=true` dans l'environnement de build.
+   Pour GitHub Pages, créer cette **variable Actions** dans Settings → Secrets and
+   variables → Actions → Variables, puis reconstruire le site.
+6. Tester confirmation, récupération, liens expirés, connexion, modification du
+   profil et déconnexion avec deux comptes pour vérifier l'isolation RLS.
+
+Le flag frontend évite de proposer des envois avant configuration ; il ne remplace
+pas les paramètres d'inscription et de sécurité côté Supabase.
+Les liens utilisent la racine du site, sans route hash. L'initialisation Supabase
+valide les liens et consomme les tokens avant le montage de HashRouter, puis ouvre
+le compte ou le formulaire de nouveau mot de passe. Le flux navigateur reste le
+flux implicite du client Supabase actuel ; un changement vers PKCE doit adapter et
+tester les retours de récupération.
+Les pages client ne présentent pas encore d'historique de commandes : panier,
+commandes, livraison et Bonum constituent les prochaines étapes.
+
+## Déploiement du frontend
 
 Publier le dossier `dist/` sur un hébergement statique avec fallback SPA vers `index.html`, nécessaire pour ouvrir directement `/catalogue`, `/catalogue/:slug` et `/contact`. Les routes `/api/*` doivent être servies par le backend, sans fallback HTML. Le fichier `public/_redirects` fournit le fallback pour les hébergeurs compatibles.
 
