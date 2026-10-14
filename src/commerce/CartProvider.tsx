@@ -16,7 +16,7 @@ import {
   MAX_QUANTITY,
   quantityLimit,
   saveCart,
-  STORAGE_KEY,
+  cartStorageKey,
 } from "./cart";
 
 type CartContextType = {
@@ -34,22 +34,42 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth();
-  const [items, setItems] = useState(loadCart);
+  const { session, loading } = useAuth();
+  const userId = !loading ? (session?.user.id ?? null) : null;
+  return (
+    <AccountCartProvider key={userId ?? "guest"} userId={userId}>
+      {children}
+    </AccountCartProvider>
+  );
+}
+
+function AccountCartProvider({
+  userId,
+  children,
+}: {
+  userId: string | null;
+  children: ReactNode;
+}) {
+  // Remount on account changes: never render or persist the previous user's items.
+  const [items, setItems] = useState(() => (userId ? loadCart(userId) : []));
   const [storageFailed, setStorageFailed] = useState(false);
   useEffect(() => {
-    setStorageFailed(!saveCart(items));
-  }, [items]);
+    if (userId) setStorageFailed(!saveCart(userId, items));
+  }, [userId, items]);
   useEffect(() => {
+    if (!userId) return;
     function sync(event: StorageEvent) {
-      if (event.key === STORAGE_KEY || event.key === null) setItems(loadCart());
+      if (event.storageArea && event.storageArea !== window.localStorage)
+        return;
+      if (event.key === cartStorageKey(userId!) || event.key === null)
+        setItems(loadCart(userId!));
     }
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
-  }, []);
+  }, [userId]);
 
   function add(product: Product, variant: ProductVariant, quantity: number) {
-    if (!session) return "Сагсанд нэмэхийн тулд нэвтэрнэ үү.";
+    if (!userId) return "Сагсанд нэмэхийн тулд нэвтэрнэ үү.";
     if (
       product.isPlaceholder ||
       !product.variants.some((v) => v.id === variant.id) ||
@@ -78,11 +98,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return null;
   }
   function changeQuantity(item: CartItem, quantity: number) {
+    if (!userId) return;
     setItems((current) =>
       changeCartQuantity(current, item.productId, item.variantId, quantity),
     );
   }
   function remove(item: CartItem) {
+    if (!userId) return;
     setItems((current) =>
       current.filter(
         (v) =>

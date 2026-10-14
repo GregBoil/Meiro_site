@@ -53,10 +53,12 @@ Le panier est accessible via `/cart` et les fiches produit. Une variante précis
 est requise ; couleur et matériau sont affichés. Les variantes épuisées, sans prix
 valide ou sans disponibilité connue ne peuvent pas être ajoutées. Les variantes
 `made_to_order` restent sélectionnables et sont identifiées comme telles.
-Le navigateur conserve uniquement identifiants et quantités dans `meiro.cart.v1`.
-Le panier reste présent après connexion et déconnexion et se synchronise entre
-onglets ; il n'est pas synchronisé entre appareils. Un message signale les échecs
-de stockage.
+Le navigateur conserve uniquement identifiants et quantités dans
+`meiro.cart.v2.<userId>`. Chaque compte a son panier local. La déconnexion masque
+les articles ; une reconnexion au même compte les restaure sur ce navigateur.
+La synchronisation entre onglets concerne uniquement le compte actif. Le panier
+ne se synchronise pas entre appareils. L'ancien panier partagé `meiro.cart.v1`
+n'est pas importé : son propriétaire ne peut pas être déterminé.
 
 À l'ouverture du panier, prix et disponibilité sont relus depuis le catalogue.
 Les lignes devenues indisponibles restent visibles, peuvent être retirées et sont

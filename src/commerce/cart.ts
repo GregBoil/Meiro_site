@@ -1,6 +1,9 @@
 import type { CartItem } from "./types";
 import type { Product, ProductVariant } from "../data/products";
-export const STORAGE_KEY = "meiro.cart.v1";
+// The former shared v1 cart cannot be attributed to a user and is never imported.
+export function cartStorageKey(userId: string): string {
+  return `meiro.cart.v2.${userId}`;
+}
 export const MAX_QUANTITY = 99;
 
 export function normalizeCart(value: unknown): CartItem[] {
@@ -95,10 +98,10 @@ export function resolveCart(items: CartItem[], products: Product[]) {
   });
 }
 
-export function loadCart(): CartItem[] {
+export function loadCart(userId: string): CartItem[] {
   try {
     const value: unknown = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) || "[]",
+      localStorage.getItem(cartStorageKey(userId)) || "[]",
     );
     return normalizeCart(value);
   } catch {
@@ -106,9 +109,9 @@ export function loadCart(): CartItem[] {
   }
 }
 
-export function saveCart(items: CartItem[]): boolean {
+export function saveCart(userId: string, items: CartItem[]): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    localStorage.setItem(cartStorageKey(userId), JSON.stringify(items));
     return true;
   } catch {
     return false;

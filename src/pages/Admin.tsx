@@ -152,7 +152,7 @@ export function AdminDashboard() {
     if (!supabase) return;
     Promise.all([
       supabase.from("products").select("status"),
-      supabase.from("variant_availability").select("*"),
+      supabase.from("variant_availability").select("variant_id,availability"),
       supabase.from("media").select("id,product_images(id)"),
       supabase
         .from("collections")
@@ -166,24 +166,11 @@ export function AdminDashboard() {
       const homepageMedia = new Set(
         ((home.data ?? []) as any[]).map((x) => x.media_id),
       );
-      const qty = (x: any) =>
-        Number(
-          x.quantity_available ??
-            x.available_quantity ??
-            Number(x.quantity_on_hand ?? 0) - Number(x.quantity_reserved ?? 0),
-        );
       setStats({
         products: products.length,
         drafts: products.filter((x) => x.status === "draft").length,
-        out: availability.filter(
-          (x) => x.track_inventory !== false && qty(x) <= 0,
-        ).length,
-        low: availability.filter(
-          (x) =>
-            x.track_inventory !== false &&
-            qty(x) > 0 &&
-            qty(x) <= Number(x.low_stock_threshold ?? 2),
-        ).length,
+        out: availability.filter((x) => x.availability === "sold_out").length,
+        low: availability.filter((x) => x.availability === "low_stock").length,
         unused: media.filter(
           (x) => !x.product_images?.length && !homepageMedia.has(x.id),
         ).length,

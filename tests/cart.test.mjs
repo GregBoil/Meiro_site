@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  cartStorageKey,
   loadCart,
   saveCart,
   normalizeCart,
@@ -128,15 +129,15 @@ test("made-to-order permits zero stock while tracked stock limits quantities", (
 test("cart survives a persistence round trip", () => {
   storage();
   const items = [{ productId: "one", variantId: null, quantity: 2 }];
-  assert.equal(saveCart(items), true);
-  assert.deepEqual(loadCart(), items);
+  assert.equal(saveCart("client-a", items), true);
+  assert.deepEqual(loadCart("client-a"), items);
 });
 
 test("corrupt storage falls back to an empty cart", () => {
   storage("{bad json");
-  assert.deepEqual(loadCart(), []);
+  assert.deepEqual(loadCart("client-a"), []);
   storage('{"not":"an array"}');
-  assert.deepEqual(loadCart(), []);
+  assert.deepEqual(loadCart("client-a"), []);
 });
 
 test("invalid quantities and variants are discarded", () => {
@@ -149,7 +150,7 @@ test("invalid quantities and variants are discarded", () => {
       { productId: "two", variantId: "brown", quantity: 1 },
     ]),
   );
-  assert.deepEqual(loadCart(), [
+  assert.deepEqual(loadCart("client-a"), [
     { productId: "two", variantId: "brown", quantity: 1 },
   ]);
 });
@@ -163,6 +164,26 @@ test("unavailable storage is handled without crashing", () => {
       throw new Error("quota exceeded");
     },
   };
-  assert.deepEqual(loadCart(), []);
-  assert.equal(saveCart([]), false);
+  assert.deepEqual(loadCart("client-a"), []);
+  assert.equal(saveCart("client-a", []), false);
+});
+
+test("account carts stay separate and never import the unattributed legacy cart", () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  const a = [{ productId: "one", variantId: "brown", quantity: 2 }];
+  const b = [{ productId: "two", variantId: "black", quantity: 1 }];
+  values.set("meiro.cart.v1", JSON.stringify(a));
+  assert.deepEqual(loadCart("client-a"), []);
+  assert.deepEqual(loadCart("client-b"), []);
+  saveCart("client-a", a);
+  saveCart("client-b", b);
+  assert.notEqual(cartStorageKey("client-a"), cartStorageKey("client-b"));
+  assert.deepEqual(loadCart("client-a"), a);
+  assert.deepEqual(loadCart("client-b"), b);
+  saveCart("client-b", []);
+  assert.deepEqual(loadCart("client-a"), a);
 });
