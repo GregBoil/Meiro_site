@@ -12,6 +12,7 @@ export default function Admin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -36,13 +37,21 @@ export default function Admin() {
 
   async function signIn(event: FormEvent) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase || signingIn) return;
     setError("");
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) setError("И-мэйл эсвэл нууц үг буруу байна.");
+    setSigningIn(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) setError("И-мэйл эсвэл нууц үг буруу байна.");
+    } catch {
+      setError("Холболт амжилтгүй боллоо. Дахин оролдоно уу.");
+    } finally {
+      setPassword("");
+      setSigningIn(false);
+    }
   }
 
   if (loading || authLoading)
@@ -54,13 +63,19 @@ export default function Admin() {
   if (!session)
     return (
       <main className="admin-login">
-        <form className="admin-login-card" onSubmit={signIn}>
+        <form
+          className="admin-login-card"
+          onSubmit={signIn}
+          aria-busy={signingIn}
+        >
           <p className="admin-kicker">MEIRO / ADMIN</p>
           <h1>Нэвтрэх</h1>
           <label>
             И-мэйл
             <input
               type="email"
+              autoComplete="username"
+              disabled={signingIn}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -70,13 +85,21 @@ export default function Admin() {
             Нууц үг
             <input
               type="password"
+              autoComplete="current-password"
+              disabled={signingIn}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </label>
-          {error && <p className="admin-error">{error}</p>}
-          <button type="submit">Нэвтрэх</button>
+          {error && (
+            <p className="admin-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={!supabase || signingIn}>
+            {signingIn ? "Нэвтэрч байна…" : "Нэвтрэх"}
+          </button>
         </form>
       </main>
     );

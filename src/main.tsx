@@ -1,4 +1,5 @@
 import React from "react";
+import { AppErrorBoundary, AppFailure } from "./components/AppErrorBoundary";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
@@ -32,6 +33,8 @@ import "./commerce/checkout.css";
 const Router =
   import.meta.env.MODE === "github-pages" ? HashRouter : BrowserRouter;
 
+const root = ReactDOM.createRoot(document.getElementById("root")!);
+
 async function start() {
   const callbackError = await prepareAuthCallback({
     url: window.location.href,
@@ -42,62 +45,69 @@ async function start() {
         : Promise.resolve({ error: new Error("Unavailable") }),
     replace: (url) => window.history.replaceState(null, "", url),
   });
-  ReactDOM.createRoot(document.getElementById("root")!).render(
+  root.render(
     <React.StrictMode>
-      <AuthProvider callbackError={callbackError}>
-        <CartProvider>
-          <Router>
-            <Routes>
-              <Route path="admin" element={<Admin />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="products" element={<AdminProducts />} />
-                <Route path="products/:id" element={<AdminProductEditor />} />
-                <Route path="inventory" element={<AdminInventory />} />
-                <Route
-                  path="inventory/history"
-                  element={<AdminInventoryHistory />}
-                />
-                <Route path="collections" element={<AdminCollections />} />
-                <Route path="media" element={<AdminMedia />} />
-                <Route path="home" element={<AdminHome />} />
-              </Route>
-              <Route element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="catalogue" element={<Catalogue />} />
-                <Route path="catalogue/:slug" element={<Product />} />
-                <Route path="contact" element={<Contact />} />
-                <Route path="cart" element={<Cart />} />
-                <Route path="checkout" element={<Checkout />} />
-                <Route path="account/orders" element={<Orders />} />
-                <Route path="account" element={<Account />} />
-                <Route
-                  path="account/login"
-                  element={<AccountAuth key="login" mode="login" />}
-                />
-                <Route
-                  path="account/signup"
-                  element={<AccountAuth key="signup" mode="signup" />}
-                />
-                <Route
-                  path="account/forgot-password"
-                  element={
-                    <AccountAuth key="forgot-password" mode="forgot-password" />
-                  }
-                />
-                <Route
-                  path="account/reset-password"
-                  element={
-                    <AccountAuth key="reset-password" mode="reset-password" />
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </Router>
-        </CartProvider>
-      </AuthProvider>
+      <AppErrorBoundary>
+        <AuthProvider callbackError={callbackError}>
+          <CartProvider>
+            <Router>
+              <Routes>
+                <Route path="admin" element={<Admin />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="products/:id" element={<AdminProductEditor />} />
+                  <Route path="inventory" element={<AdminInventory />} />
+                  <Route
+                    path="inventory/history"
+                    element={<AdminInventoryHistory />}
+                  />
+                  <Route path="collections" element={<AdminCollections />} />
+                  <Route path="media" element={<AdminMedia />} />
+                  <Route path="home" element={<AdminHome />} />
+                </Route>
+                <Route element={<Layout />}>
+                  <Route index element={<Home />} />
+                  <Route path="catalogue" element={<Catalogue />} />
+                  <Route path="catalogue/:slug" element={<Product />} />
+                  <Route path="contact" element={<Contact />} />
+                  <Route path="cart" element={<Cart />} />
+                  <Route path="checkout" element={<Checkout />} />
+                  <Route path="account/orders" element={<Orders />} />
+                  <Route path="account" element={<Account />} />
+                  <Route
+                    path="account/login"
+                    element={<AccountAuth key="login" mode="login" />}
+                  />
+                  <Route
+                    path="account/signup"
+                    element={<AccountAuth key="signup" mode="signup" />}
+                  />
+                  <Route
+                    path="account/forgot-password"
+                    element={
+                      <AccountAuth
+                        key="forgot-password"
+                        mode="forgot-password"
+                      />
+                    }
+                  />
+                  <Route
+                    path="account/reset-password"
+                    element={
+                      <AccountAuth key="reset-password" mode="reset-password" />
+                    }
+                  />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </Router>
+          </CartProvider>
+        </AuthProvider>
+      </AppErrorBoundary>
     </React.StrictMode>,
   );
 }
-void start();
+void start().catch(() => {
+  root.render(<AppFailure />);
+});

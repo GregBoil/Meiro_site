@@ -52,4 +52,27 @@ Verification:
 
 The Supabase advisors still report leaked-password protection disabled. Its availability depends on the plan; dashboard configuration remains needed if supported. MFA enrollment remains 1 of 2 active admins. No strict MFA activation was applied.
 
-Next: frontend hardening and browser verification, then review/merge/deploy the account branch. Frontend changes on this branch are not yet deployed on main.
+Frontend hardening is recorded in Step 5 below. Full real-account acceptance checks and review/merge/deployment remain pending. Frontend changes on this branch are not yet deployed on main.
+
+## Step 5: frontend hardening — implemented 2026-10-15
+
+Production builds inject a Content Security Policy before external resources. Scripts are same-origin only (no inline handlers/eval); connections and remote images are limited to the configured Supabase HTTPS origin, plus its WebSocket origin for connections. Google Fonts is explicitly allowed. Data/blob images remain allowed for the MFA QR code. Inline style attributes remain supported for the existing UI. Objects, embedded frames, workers and base tags are blocked. Referrer metadata uses `no-referrer` to avoid forwarding auth query parameters to external resources. Development retains Vite's normal hot reload without a production CSP.
+
+Only the four documented public configuration variables can enter Vite's frontend environment. A build refuses secret/service-role Supabase keys, malformed/incomplete configuration, non-HTTPS Supabase URLs and external contact endpoints. Legacy `anon` keys remain supported. No production credentials are required for CI or preview builds. The four variable names remain unchanged for the Pages deployment workflow.
+
+An application error boundary and startup fallback show Mongolian recovery actions instead of a blank screen or raw error details. This catches rendering/startup failures, not every async event handler. The admin login now prevents duplicate submissions while pending, handles unexpected request errors, clears its password state after submission, and releases the busy state. Existing client account handling already catches request failures.
+
+Direct package versions are pinned to the previously locked versions. `source-map-js` was updated from 1.2.1 to 1.2.2 to fix GHSA-68fv-2mgg-jv7q (build dependency). `npm audit` reports zero known vulnerabilities at this check. A new PR workflow runs dependency audit, tests and Pages compilation without deployment permissions.
+
+Verification:
+- 26 automated tests pass; browser and Pages builds compile.
+- A configured Pages build used a fake public key and an unrelated `VITE_PRIVATE_SECRET` marker. The marker was absent from the built output.
+- Chromium checks on the actual configured Pages build with simulated Supabase/Fonts responses: desktop/mobile pages, no horizontal overflow on the homepage, guest login/contact states, admin invalid-credentials and network-failure retries with password clearing, and mocked MFA enrollment with a decodable SVG data-image QR. No unexpected CSP violations or uncaught page errors.
+- Browser enforcement checks reject an injected inline script and an unapproved fetch. A deliberately crashing test component exercises the error boundary and its recovery actions without displaying raw error content. The mobile recovery screen was visually inspected.
+- These are local browser checks with simulated services, not successful real-account login/payment/upload tests in production.
+
+Hosting limitations: GitHub Pages does not let this repository set custom response headers. Meta CSP cannot enforce `frame-ancestors`, and no X-Frame-Options/HSTS/custom header protection is claimed. When hosting changes, configure supported response headers at the host. Payments or new third-party integrations will require an explicit review of CSP allowed origins before use.
+
+Remaining rollout: second admin enrollment and strict database MFA, full real-account desktop/mobile acceptance checks, review/merge and deployment. Frontend changes remain on `feat/customer-accounts` until reviewed; no main deployment performed.
+
+References: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy ; https://vite.dev/config/shared-options.html#envprefix ; https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary ; https://github.com/advisories/GHSA-68fv-2mgg-jv7q
