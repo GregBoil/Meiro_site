@@ -31,3 +31,25 @@ Cart storage is now per account (`meiro.cart.v2.<userId>`). The provider remount
 The dashboard reads `availability` and counts only `sold_out` and `low_stock`; `available`, `made_to_order` and unknown statuses are not counted as out of stock.
 
 Verification: account persistence/isolation unit test, 20 passing automated tests, Pages build, and DOM checks for account switch/logout/relogin, auth loading, no cross-account writes, active-account tab sync, unrelated-account event isolation and mixed dashboard statuses.
+
+## Step 4: media hardening — applied 2026-10-15
+
+Applied individually to the shared Meiro database:
+- `20261015072420_harden_media_access.sql`
+- `20261015072510_allow_admin_media_storage_listing.sql`
+
+The bucket was already restricted to JPEG, PNG and WebP, maximum 10 MiB. These settings are now versioned. Both upload screens share the same MIME/extension/size/header checks, explicit accepted formats, Mongolian guidance, random UUID paths, and `finally` handling to release their busy state after errors. Invalid files are rejected before creating a product draft. Header checks are client-side feedback, not a server-side byte scanner; bucket MIME/size limits and admin RLS remain the server boundary.
+
+Visitors and customers can query media records only when used by a published product or active homepage slide. Admins retain full library access. The bucket remains public: someone who already knows an image URL can still fetch the image. This restriction hides unused/draft media metadata; it does not make those image bytes confidential. No existing files were deleted.
+
+Product/media foreign keys now reject deleting referenced media instead of cascading deletion into product images. Homepage references already used RESTRICT. Storage restrictive policies prevent deleting or replacing registered files. Remove an unused media record before its file; existing UI cleanup uses that order. Admin-only Storage SELECT permission is explicit, as listing/deletion requires it. Customers cannot list Storage metadata.
+
+Verification:
+- 23 automated tests pass, including MIME/extension/signature mismatch, SVG/HTML, empty/oversize files, size boundary, generated paths, media RLS and Storage protection/cleanup.
+- GitHub Pages compilation passes.
+- Real-database role checks in a rolled-back transaction: published media readable; unused metadata hidden from anon and customers; anonymous insertion denied; admin library and Storage listing readable; deleting referenced media rejected. Test data did not persist.
+- No real upload/delete through the Storage HTTP API or signed-in browser visual check is claimed.
+
+The Supabase advisors still report leaked-password protection disabled. Its availability depends on the plan; dashboard configuration remains needed if supported. MFA enrollment remains 1 of 2 active admins. No strict MFA activation was applied.
+
+Next: frontend hardening and browser verification, then review/merge/deploy the account branch. Frontend changes on this branch are not yet deployed on main.
