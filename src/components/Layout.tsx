@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X, ShoppingCart } from "lucide-react";
 import { navigation, socialLinks } from "../data/site";
+import { useAuth } from "../auth/AuthProvider";
+import { useCart } from "../commerce/CartProvider";
 
 export default function Layout() {
+  const { session } = useAuth();
+  const { count } = useCart();
+  const accountLabel = session ? "Миний бүртгэл" : "Нэвтрэх";
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
@@ -14,6 +19,14 @@ export default function Layout() {
       "/": "Өөрийн замаар.",
       "/catalogue": "Бүтээлүүд",
       "/contact": "Холбоо барих",
+      "/cart": "Миний сагс",
+      "/checkout": "Захиалгын мэдээлэл",
+      "/account/orders": "Миний захиалгууд",
+      "/account": "Миний бүртгэл",
+      "/account/login": "Нэвтрэх",
+      "/account/signup": "Бүртгүүлэх",
+      "/account/forgot-password": "Нууц үг сэргээх",
+      "/account/reset-password": "Шинэ нууц үг",
     };
     document.title = `Meiro — ${titles[pathname] || "Бүтээл"}`;
   }, [pathname]);
@@ -54,6 +67,22 @@ export default function Layout() {
               {item.label}
             </NavLink>
           ))}
+          <NavLink to="/account">{accountLabel}</NavLink>
+          {session && (
+            <NavLink
+              to="/cart"
+              className="cart-nav-link"
+              aria-label={`Миний сагс, ${count} бүтээл`}
+              title="Миний сагс"
+            >
+              <ShoppingCart size={23} aria-hidden="true" />
+              {count > 0 && (
+                <span className="cart-count" aria-hidden="true">
+                  {count}
+                </span>
+              )}
+            </NavLink>
+          )}
         </nav>
         <button
           className="icon-button menu-toggle"
@@ -81,6 +110,26 @@ export default function Layout() {
                 <ArrowUpRight size={22} />
               </NavLink>
             ))}
+            <NavLink to="/account" onClick={() => setMenuOpen(false)}>
+              {accountLabel}
+              <ArrowUpRight size={22} />
+            </NavLink>
+            {session && (
+              <NavLink
+                to="/cart"
+                className="cart-nav-link"
+                onClick={() => setMenuOpen(false)}
+                aria-label={`Миний сагс, ${count} бүтээл`}
+                title="Миний сагс"
+              >
+                <ShoppingCart size={25} aria-hidden="true" />
+                {count > 0 && (
+                  <span className="cart-count" aria-hidden="true">
+                    {count}
+                  </span>
+                )}
+              </NavLink>
+            )}
           </nav>
         )}
       </header>
