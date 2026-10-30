@@ -36,6 +36,7 @@ jobs:
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_EMAILS_ENABLED: ${{ vars.VITE_AUTH_EMAILS_ENABLED }}
         run: npm run build:pages -- --base "${PAGES_BASE}/"
       - uses: actions/upload-pages-artifact@v3
         with:

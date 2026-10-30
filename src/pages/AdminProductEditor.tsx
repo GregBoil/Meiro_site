@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../services/supabase";
+import { IMAGE_ACCEPT, IMAGE_UPLOAD_HELP, validateImageUpload, imageUploadError } from "../media/upload";
 
 type Category={id:string;name:string};
 type Variant={id?:string;name:string;color:string;sku:string;price:number|string;active:boolean;made_to_order:boolean;lead_time_days:number|null;display_order:number;quantity_on_hand:number;quantity_reserved:number;low_stock_threshold:number;track_inventory:boolean;_deleted?:boolean};
@@ -72,14 +73,17 @@ export default function AdminProductEditor(){
    setProductId(data.id);setForm(x=>({...x,slug:generatedSlug,status:"draft"}));nav("/admin/products/"+data.id,{replace:true});return data.id;
  }
  async function uploadImage(file:File){
-   if(!supabase)return; setUploading(true);setError(""); const pid=await ensureDraft();if(!pid){setUploading(false);return}
-   const safe=file.name.toLowerCase().replace(/[^a-z0-9._-]+/g,"-"); const path=`${form.slug||slugify(form.internal_reference)||pid}/${Date.now()}-${safe}`;
-   const {error:ue}=await supabase.storage.from("product-images").upload(path,file,{contentType:file.type,upsert:false}); if(ue){setError(ue.message);setUploading(false);return}
+   if(!supabase||uploading)return; setUploading(true);setError("");
+   try {
+   const path=await validateImageUpload(file);
+   const pid=await ensureDraft();if(!pid){return}
+   const {error:ue}=await supabase.storage.from("product-images").upload(path,file,{contentType:file.type,upsert:false}); if(ue){setError(ue.message);return}
    const {data:m,error:me}=await supabase.from("media").insert({storage_path:path,filename:file.name,alt_text:form.name||file.name,mime_type:file.type||null,file_size:file.size}).select("id,storage_path,filename,alt_text").single();
-   if(me||!m){await supabase.storage.from("product-images").remove([path]);setError(me?.message||"Зураг хадгалж чадсангүй.");setUploading(false);return}
+   if(me||!m){await supabase.storage.from("product-images").remove([path]);setError(me?.message||"Зураг хадгалж чадсангүй.");return}
    const {data:pi,error:pe}=await supabase.from("product_images").insert({product_id:pid,media_id:m.id,is_primary:images.length===0,display_order:images.length}).select("id,variant_id,media_id,is_primary,display_order").single();
-   if(pe||!pi){await supabase.from("media").delete().eq("id",m.id);await supabase.storage.from("product-images").remove([path]);setError(pe?.message||"Зураг холбож чадсангүй.");setUploading(false);return}
-   setImages(x=>[...x,{...pi,media:m} as ProductImage]);setUploading(false);
+   if(pe||!pi){await supabase.from("media").delete().eq("id",m.id);await supabase.storage.from("product-images").remove([path]);setError(pe?.message||"Зураг холбож чадсангүй.");return}
+   setImages(x=>[...x,{...pi,media:m} as ProductImage]);
+   } catch(error) { setError(imageUploadError(error)); } finally { setUploading(false); }
  }
  async function openLibrary(){if(!supabase)return;setError("");const {data,error}=await supabase.from("media").select("id,storage_path,filename,alt_text").order("created_at",{ascending:false});if(error)setError(error.message);else{setLibrary((data??[]) as any[]);setShowLibrary(true)}}
  async function attachMedia(media:{id:string;storage_path:string;filename:string;alt_text:string|null}){if(!supabase)return;const pid=await ensureDraft();if(!pid)return;if(images.some(i=>i.media_id===media.id)){setError("Энэ зураг бүтээгдэхүүнд аль хэдийн нэмэгдсэн байна.");return}const {data,error}=await supabase.from("product_images").insert({product_id:pid,media_id:media.id,is_primary:images.length===0,display_order:images.length}).select("id,variant_id,media_id,is_primary,display_order").single();if(error||!data){setError(error?.message||"Зураг холбож чадсангүй.");return}setImages(x=>[...x,{...data,media} as ProductImage]);setShowLibrary(false)}
@@ -131,11 +135,11 @@ export default function AdminProductEditor(){
      const problems=publicationProblems();
      if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
-   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!/^[A-Z0-9]+$/.test(v.sku.trim().toUpperCase())||String(v.price).trim()===""||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
+   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!v.sku.trim()||String(v.price).trim()===""||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
    if(invalidVariant){showError("Хувилбар бүрийн нэр, дотоод код болон үнийг шалгана уу. Нийтлэх хувилбарын үнэ 0-ээс их байх ёстой.");return}
    if(variants.some(v=>v._deleted)){showError("Устгах хувилбарыг эхлээд тусад нь устгана уу.");return}
    const newRef=form.internal_reference.trim().toUpperCase();
-   if(!/^[A-Z0-9]+$/.test(newRef)){showError("Бүтээгдэхүүний дотоод код зөвхөн латин том үсэг болон тоо агуулна.");return}
+   if(!newRef){showError("Бүтээгдэхүүний дотоод код оруулна уу.");return}
    const generatedSlug=slugify(newRef);
    if(!generatedSlug){showError("Дотоод код оруулна уу.");return}
    setSaving(true);
@@ -206,11 +210,11 @@ export default function AdminProductEditor(){
   <section className="admin-panel admin-variants-panel"><div className="admin-section-head"><div><h2>Хувилбарууд</h2><p>Хувилбар, үнэ болон дотоод кодыг энд удирдана.</p></div></div>
    <div className="admin-variants">{variants.map((v,i)=>v._deleted?null:<div className="admin-variant" key={v.id??i}>
     <div className="admin-variant-top"><div><strong>{v.name||"Шинэ хувилбар"}{form.internal_reference&&v.sku&&<span className="admin-variant-title-code"> · {form.internal_reference.toUpperCase()}-{v.sku}</span>}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
-    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})} placeholder="Жишээ: BLU" required/></label><label>Үнэ (₮)<input type="text" inputMode="numeric" pattern="[0-9]*" value={v.price} onChange={e=>{const value=e.target.value;if(/^\d*$/.test(value))updateVariant(i,{price:value})}} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
+    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase()})} placeholder="Жишээ: BLU" required/></label><label>Үнэ (₮)<input type="text" inputMode="numeric" pattern="[0-9]*" value={v.price} onChange={e=>{const value=e.target.value;if(/^\d*$/.test(value))updateVariant(i,{price:value})}} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
     <div className="admin-variant-options"><label className="admin-check"><input type="checkbox" checked={v.active} onChange={e=>updateVariant(i,{active:e.target.checked})}/> Идэвхтэй</label><label className="admin-check"><input type="checkbox" checked={v.made_to_order} onChange={e=>updateVariant(i,{made_to_order:e.target.checked})}/> Захиалгаар хийх</label>{v.made_to_order&&<label>Хийх хугацаа (хоног)<input type="number" min="1" value={v.lead_time_days??""} onChange={e=>updateVariant(i,{lead_time_days:e.target.value?Number(e.target.value):null})}/></label>}</div>
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}<button type="button" className="admin-secondary admin-add-variant-bottom" onClick={addVariant}>+ Хувилбар нэмэх</button>
   </section>
-  <section className="admin-panel admin-media-panel"><div className="admin-section-head"><div><h2>Зураг</h2><p>Бүтээгдэхүүн болон хувилбарын зургууд.</p></div><div className="admin-media-add-actions"><button type="button" className="admin-secondary" onClick={openLibrary}>Медиагаас сонгох</button><label className="admin-upload-button">{uploading?"Оруулж байна…":"+ Шинэ зураг"}<input type="file" accept="image/*" disabled={uploading} onChange={e=>{const file=e.target.files?.[0];if(file)uploadImage(file);e.currentTarget.value=""}}/></label></div></div>
+  <section className="admin-panel admin-media-panel"><div className="admin-section-head"><div><h2>Зураг</h2><p>Бүтээгдэхүүн болон хувилбарын зургууд.</p><p>{IMAGE_UPLOAD_HELP}</p></div><div className="admin-media-add-actions"><button type="button" className="admin-secondary" onClick={openLibrary}>Медиагаас сонгох</button><label className="admin-upload-button">{uploading?"Оруулж байна…":"+ Шинэ зураг"}<input type="file" accept={IMAGE_ACCEPT} disabled={uploading} onChange={e=>{const file=e.target.files?.[0];if(file)uploadImage(file);e.currentTarget.value=""}}/></label></div></div>
    {showLibrary&&<div className="admin-library-picker"><div className="admin-library-picker-head"><strong>Медиагаас сонгох</strong><button type="button" onClick={()=>setShowLibrary(false)}>×</button></div><div className="admin-library-picker-grid">{library.map(m=><button type="button" key={m.id} className={images.some(i=>i.media_id===m.id)?"already-used":""} disabled={images.some(i=>i.media_id===m.id)} onClick={()=>attachMedia(m)}><img src={imageUrl(m.storage_path)} alt={m.alt_text||m.filename}/><span>{m.filename}</span></button>)}</div></div>}
    {images.length===0?<p className="admin-empty">Зураг нэмээгүй байна.</p>:<div className="admin-image-grid">{[...images].sort((a,b)=>a.display_order-b.display_order).map(image=><div className={`admin-image-card ${draggedImageId===image.id?"is-dragging":""}`} key={image.id} draggable onDragStart={()=>setDraggedImageId(image.id)} onDragEnd={()=>setDraggedImageId(null)} onDragOver={e=>e.preventDefault()} onDrop={()=>{if(draggedImageId)reorderImages(draggedImageId,image.id);setDraggedImageId(null)}}>
     {image.media&&<div className="admin-image-preview"><img src={imageUrl(image.media.storage_path)} alt={image.media.alt_text||form.name}/><span className="admin-drag-hint">⋮⋮</span>{image.is_primary&&<span className="admin-primary-badge">Үндсэн зураг</span>}</div>}

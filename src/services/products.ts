@@ -8,6 +8,7 @@ type VariantRow = {
   name: string;
   sku: string;
   color: string | null;
+  material: string | null;
   price: number;
   active: boolean;
   display_order: number;
@@ -45,13 +46,20 @@ type AvailabilityRow = {
 
 function getPublicImageUrl(storagePath: string | undefined) {
   if (!storagePath || !supabase) return null;
-  const { data } = supabase.storage.from("product-images").getPublicUrl(storagePath);
+  const { data } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(storagePath);
   return data.publicUrl;
 }
 
-function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>): Product {
+function mapProduct(
+  row: ProductRow,
+  availabilityMap: Map<string, Availability>,
+): Product {
   const activeVariantIds = new Set(
-    (row.product_variants ?? []).filter((variant) => variant.active).map((variant) => variant.id),
+    (row.product_variants ?? [])
+      .filter((variant) => variant.active)
+      .map((variant) => variant.id),
   );
 
   const variants = [...(row.product_variants ?? [])]
@@ -64,15 +72,21 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
       stock: null,
       priceMnt: variant.price,
       color: variant.color,
+      material: variant.material,
       availability: availabilityMap.get(variant.id) ?? null,
     }));
 
-  const visibleImages = [...(row.product_images ?? [])]
-    .filter((image) => !image.variant_id || activeVariantIds.has(image.variant_id));
+  const visibleImages = [...(row.product_images ?? [])].filter(
+    (image) => !image.variant_id || activeVariantIds.has(image.variant_id),
+  );
 
   const images = visibleImages
     .filter((image) => image.media?.storage_path)
-    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
+    .sort(
+      (a, b) =>
+        Number(b.is_primary) - Number(a.is_primary) ||
+        a.display_order - b.display_order,
+    )
     .map((image) => ({
       id: image.id,
       url: getPublicImageUrl(image.media?.storage_path) ?? "",
@@ -84,7 +98,11 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
 
   const primaryImage =
     [...visibleImages]
-      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.display_order - b.display_order)
+      .sort(
+        (a, b) =>
+          Number(b.is_primary) - Number(a.is_primary) ||
+          a.display_order - b.display_order,
+      )
       .find((image) => image.media?.storage_path)?.media ?? null;
 
   const availabilityValues = variants.map((variant) => variant.availability);
@@ -104,7 +122,10 @@ function mapProduct(row: ProductRow, availabilityMap: Map<string, Availability>)
     imageDescription: primaryImage?.alt_text ?? row.name,
     imageUrl: getPublicImageUrl(primaryImage?.storage_path),
     tone: "taupe",
-    priceMnt: variants.length > 0 ? Math.min(...variants.map((variant) => variant.priceMnt ?? 0)) : null,
+    priceMnt:
+      variants.length > 0
+        ? Math.min(...variants.map((variant) => variant.priceMnt ?? 0))
+        : null,
     availability: productAvailability,
     isPlaceholder: false,
     variants,
@@ -128,7 +149,7 @@ export async function getPublishedProducts(): Promise<Product[]> {
       material,
       featured,
       category:categories(slug),
-      product_variants(id,name,sku,color,price,active,display_order),
+      product_variants(id,name,sku,color,material,price,active,display_order),
       product_images(id,variant_id,is_primary,display_order,media(storage_path,alt_text))
       `,
     )
@@ -138,7 +159,9 @@ export async function getPublishedProducts(): Promise<Product[]> {
   if (error) throw error;
 
   const variantIds = (rows ?? []).flatMap((row: any) =>
-    (row.product_variants ?? []).filter((variant: VariantRow) => variant.active).map((variant: VariantRow) => variant.id),
+    (row.product_variants ?? [])
+      .filter((variant: VariantRow) => variant.active)
+      .map((variant: VariantRow) => variant.id),
   );
 
   const availabilityMap = new Map<string, Availability>();
@@ -161,7 +184,9 @@ export async function getPublishedProducts(): Promise<Product[]> {
   );
 }
 
-export async function getPublishedProductBySlug(slug: string): Promise<Product | null> {
+export async function getPublishedProductBySlug(
+  slug: string,
+): Promise<Product | null> {
   const products = await getPublishedProducts();
   return products.find((product) => product.slug === slug) ?? null;
 }
