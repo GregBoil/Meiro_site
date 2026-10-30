@@ -55,9 +55,14 @@ function CheckoutForm({ userId }: { userId: string }) {
     let active = true;
     setAddressLoading(true);
     setAddressError(false);
+    setReviewing(false);
     loadDeliveryAddress(userId)
       .then((data) => {
-        if (active) setAddress(data);
+        if (active) {
+          setAddress(data.address);
+          setSaved(data.saved);
+          setReviewing(data.saved);
+        }
       })
       .catch(() => {
         if (active) setAddressError(true);
@@ -74,7 +79,6 @@ function CheckoutForm({ userId }: { userId: string }) {
     setLoading(true);
     setPreview(null);
     setPreviewError(false);
-    setReviewing(false);
     if (!items.length) {
       setLoading(false);
       return;

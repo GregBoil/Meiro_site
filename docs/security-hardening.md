@@ -76,3 +76,11 @@ Hosting limitations: GitHub Pages does not let this repository set custom respon
 Remaining rollout: second admin enrollment and strict database MFA, full real-account desktop/mobile acceptance checks, review/merge and deployment. Frontend changes remain on `feat/customer-accounts` until reviewed; no main deployment performed.
 
 References: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy ; https://vite.dev/config/shared-options.html#envprefix ; https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary ; https://github.com/advisories/GHSA-68fv-2mgg-jv7q
+
+## Customer acceptance checks — 2026-10-30
+
+User-verified on the local branch: guest catalogue/product access, sign-in required for the basket, admin login inaccessible without a session; client cart quantity/pricing/persistence and admin access refusal; separate baskets when switching between two accounts.
+
+Checkout refresh fix: the saved delivery address was fetched, but the form always started at the address-entry step. Address loading now distinguishes a persisted address from profile defaults and restores the review step only for the current account's saved address. A separate preview refresh no longer discards that review state. Users can still edit and save the address. No schema or production customer data changed.
+
+Verification: 27 automated tests and Pages compilation pass. A new regression test covers per-user address save/load, updates, unsaved profile defaults and read failures. Chromium checks against a configured build with simulated services cover save/refresh without resubmitting, delayed preview, editing and refresh, second-account isolation, return to the first account, and read-error retry. Payment stays disabled. Actual-user address refresh and isolation remain to be retested by the user after pulling the fix.

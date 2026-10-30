@@ -98,7 +98,7 @@ export async function loadDeliveryAddress(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  if (data) return data as DeliveryAddress;
+  if (data) return { address: data as DeliveryAddress, saved: true };
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name,phone")
@@ -106,13 +106,16 @@ export async function loadDeliveryAddress(userId: string) {
     .single();
   if (profileError) throw profileError;
   return {
-    recipient_name: profile?.full_name ?? "",
-    phone: profile?.phone ?? "",
-    city: "Ulaanbaatar" as const,
-    district: "",
-    khoroo: 1,
-    address_line: "",
-    instructions: "",
+    saved: false,
+    address: {
+      recipient_name: profile?.full_name ?? "",
+      phone: profile?.phone ?? "",
+      city: "Ulaanbaatar" as const,
+      district: "",
+      khoroo: 1,
+      address_line: "",
+      instructions: "",
+    },
   };
 }
 
