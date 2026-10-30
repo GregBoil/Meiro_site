@@ -92,3 +92,10 @@
   padding-left: 20px;
   line-height: 1.8;
 }
+
+.checkout-address-choice { margin: 20px 0; padding: 16px; border: 1px solid #ded8d3; }
+.checkout-address-choice legend { padding: 0 6px; }
+.checkout-address-choice label { display: flex; gap: 10px; align-items: center; margin: 12px 0; cursor: pointer; }
+.checkout-address-choice input { width: auto; }
+.checkout-address-choice p, .checkout-primary-address p { margin: 12px 0; }
+.checkout-primary-address { padding: 16px; border: 1px solid #ded8d3; }

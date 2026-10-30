@@ -11,6 +11,7 @@ import {
   saveDeliveryAddress,
   type CheckoutPreview,
   type DeliveryAddress,
+  type AddressSource,
 } from "../services/orders";
 
 export default function Checkout() {
@@ -35,6 +36,13 @@ function CheckoutForm({ userId }: { userId: string }) {
     address_line: "",
     instructions: "",
   });
+  const [source, setSource] = useState<AddressSource>("other");
+  const [primaryAddress, setPrimaryAddress] = useState<DeliveryAddress | null>(
+    null,
+  );
+  const [otherAddress, setOtherAddress] = useState<DeliveryAddress | null>(
+    null,
+  );
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [addressLoading, setAddressLoading] = useState(true);
@@ -60,6 +68,9 @@ function CheckoutForm({ userId }: { userId: string }) {
       .then((data) => {
         if (active) {
           setAddress(data.address);
+          setSource(data.source);
+          setPrimaryAddress(data.primaryAddress);
+          setOtherAddress(data.otherAddress);
           setSaved(data.saved);
           setReviewing(data.saved);
         }
@@ -103,8 +114,24 @@ function CheckoutForm({ userId }: { userId: string }) {
     value: DeliveryAddress[K],
   ) {
     setAddress((current) => ({ ...current, [field]: value }));
+    if (source === "other")
+      setOtherAddress((current) =>
+        current ? { ...current, [field]: value } : null,
+      );
     setSaved(false);
     setSaveError(false);
+  }
+  function chooseSource(next: AddressSource) {
+    if (busy || next === source || (next === "primary" && !primaryAddress))
+      return;
+    if (source === "other") setOtherAddress(address);
+    setSource(next);
+    setAddress(
+      next === "primary" ? primaryAddress! : (otherAddress ?? address),
+    );
+    setSaved(false);
+    setSaveError(false);
+    setReviewing(false);
   }
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -133,7 +160,7 @@ function CheckoutForm({ userId }: { userId: string }) {
     setSaveError(false);
     setSaved(false);
     try {
-      await saveDeliveryAddress(userId, address);
+      await saveDeliveryAddress(userId, address, source);
       setSaved(true);
       setReviewing(true);
     } catch {
@@ -176,6 +203,39 @@ function CheckoutForm({ userId }: { userId: string }) {
           <p className="checkout-area">
             Одоогоор зөвхөн Улаанбаатар хотод хүргэнэ.
           </p>
+          {!addressLoading && !addressError && (
+            <fieldset className="checkout-address-choice" disabled={busy}>
+              <legend>Хүргэлтийн хаяг сонгох</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="address-source"
+                  value="primary"
+                  checked={source === "primary"}
+                  disabled={!primaryAddress}
+                  onChange={() => chooseSource("primary")}
+                />{" "}
+                Үндсэн хаягаар хүргүүлэх
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="address-source"
+                  value="other"
+                  checked={source === "other"}
+                  onChange={() => chooseSource("other")}
+                />{" "}
+                Өөр хаягаар хүргүүлэх
+              </label>
+              {!primaryAddress && (
+                <p>
+                  <Link to="/account">
+                    Миний мэдээлэл хэсэгт үндсэн хаягаа нэмэх →
+                  </Link>
+                </p>
+              )}
+            </fieldset>
+          )}
           {reviewing ? (
             <>
               <dl className="checkout-address">
@@ -258,63 +318,76 @@ function CheckoutForm({ userId }: { userId: string }) {
                   onChange={(e) => change("phone", e.target.value)}
                 />
               </label>
-              <p>Хот: Улаанбаатар</p>
-              <label htmlFor="delivery-district">
-                Дүүрэг
-                <select
-                  id="delivery-district"
-                  autoComplete="address-level2"
-                  required
-                  disabled={busy}
-                  value={address.district}
-                  onChange={(e) => change("district", e.target.value)}
-                >
-                  <option value="">Дүүргээ сонгоно уу</option>
-                  {deliveryDistricts.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label htmlFor="delivery-khoroo">
-                Хороо
-                <input
-                  id="delivery-khoroo"
-                  type="number"
-                  min={1}
-                  max={100}
-                  step={1}
-                  required
-                  disabled={busy}
-                  value={address.khoroo || ""}
-                  onChange={(e) => change("khoroo", Number(e.target.value))}
-                />
-              </label>
-              <label htmlFor="delivery-address">
-                Дэлгэрэнгүй хаяг
-                <textarea
-                  id="delivery-address"
-                  autoComplete="street-address"
-                  maxLength={1000}
-                  required
-                  disabled={busy}
-                  value={address.address_line}
-                  onChange={(e) => change("address_line", e.target.value)}
-                  placeholder="Гудамж, байр, орц, давхар, тоот"
-                />
-              </label>
-              <label htmlFor="delivery-instructions">
-                Нэмэлт тайлбар (заавал биш)
-                <textarea
-                  id="delivery-instructions"
-                  maxLength={1000}
-                  disabled={busy}
-                  value={address.instructions}
-                  onChange={(e) => change("instructions", e.target.value)}
-                  placeholder="Орцны код, ойролцоох таних тэмдэг"
-                />
-              </label>
+              {source === "primary" ? (
+                <div className="checkout-primary-address">
+                  <p>
+                    Улаанбаатар · {address.district}, {address.khoroo}-р хороо
+                  </p>
+                  <p>{address.address_line}</p>
+                  {address.instructions && <p>{address.instructions}</p>}
+                  <Link to="/account">Үндсэн хаягаа засах →</Link>
+                </div>
+              ) : (
+                <>
+                  <p>Хот: Улаанбаатар</p>
+                  <label htmlFor="delivery-district">
+                    Дүүрэг
+                    <select
+                      id="delivery-district"
+                      autoComplete="address-level2"
+                      required
+                      disabled={busy}
+                      value={address.district}
+                      onChange={(e) => change("district", e.target.value)}
+                    >
+                      <option value="">Дүүргээ сонгоно уу</option>
+                      {deliveryDistricts.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label htmlFor="delivery-khoroo">
+                    Хороо
+                    <input
+                      id="delivery-khoroo"
+                      type="number"
+                      min={1}
+                      max={100}
+                      step={1}
+                      required
+                      disabled={busy}
+                      value={address.khoroo || ""}
+                      onChange={(e) => change("khoroo", Number(e.target.value))}
+                    />
+                  </label>
+                  <label htmlFor="delivery-address">
+                    Дэлгэрэнгүй хаяг
+                    <textarea
+                      id="delivery-address"
+                      autoComplete="street-address"
+                      maxLength={1000}
+                      required
+                      disabled={busy}
+                      value={address.address_line}
+                      onChange={(e) => change("address_line", e.target.value)}
+                      placeholder="Гудамж, байр, орц, давхар, тоот"
+                    />
+                  </label>
+                  <label htmlFor="delivery-instructions">
+                    Нэмэлт тайлбар (заавал биш)
+                    <textarea
+                      id="delivery-instructions"
+                      maxLength={1000}
+                      disabled={busy}
+                      value={address.instructions}
+                      onChange={(e) => change("instructions", e.target.value)}
+                      placeholder="Орцны код, ойролцоох таних тэмдэг"
+                    />
+                  </label>
+                </>
+              )}
               {saveError && (
                 <p className="account-error" role="alert">
                   Хаягийг хадгалж чадсангүй. Мэдээллээ шалгаад дахин оролдоно

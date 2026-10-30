@@ -86,3 +86,7 @@ Checkout refresh fix: the saved delivery address was fetched, but the form alway
 Verification: 27 automated tests and Pages compilation pass. A new regression test covers per-user address save/load, updates, unsaved profile defaults and read failures. Chromium checks against a configured build with simulated services cover save/refresh without resubmitting, delayed preview, editing and refresh, second-account isolation, return to the first account, and read-error retry. Payment stays disabled. Actual-user address refresh and isolation remain to be retested by the user after pulling the fix.
 
 The October 30 CI audit also detected newly reported Vite advisories affecting the pinned 6.4.3 development/build tool. Vite is updated to the patched 6.4.5 release in a separate commit, preserving the existing major version. The lockfile is updated; rerun npm ci after pulling. Address browser regression checks and the complete test/build suite were rerun with this version.
+
+## Primary account address — 2026-10-30
+
+Implemented the separate main-address section in My Information and the main/other delivery selector. Migration `20261030005953_customer_primary_addresses.sql` is applied and checked with real database roles in a rolled-back transaction. Primary addresses are owner-only; an alternative delivery address cannot overwrite the primary address through the application. Existing delivery records remain intact as alternatives. See customer-addresses.md for behavior and validation. The suite now has 28 passing tests.

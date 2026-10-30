@@ -21,6 +21,47 @@ export type DeliveryAddress = {
   address_line: string;
   instructions: string;
 };
+export type PrimaryAddress = Omit<DeliveryAddress, "recipient_name" | "phone">;
+export type AddressSource = "primary" | "other";
+const addressColumns = "city,district,khoroo,address_line,instructions";
+export async function loadPrimaryAddress(
+  userId: string,
+): Promise<PrimaryAddress | null> {
+  if (!supabase) throw new Error("Unavailable");
+  const { data, error } = await supabase
+    .from("customer_primary_addresses")
+    .select(addressColumns)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as PrimaryAddress | null;
+}
+export async function savePrimaryAddress(
+  userId: string,
+  address: PrimaryAddress,
+) {
+  if (!supabase) throw new Error("Unavailable");
+  const clean = {
+    city: "Ulaanbaatar",
+    district: address.district,
+    khoroo: address.khoroo,
+    address_line: address.address_line.trim(),
+    instructions: address.instructions.trim(),
+  };
+  const { data, error } = await supabase
+    .from("customer_primary_addresses")
+    .update(clean)
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const { error } = await supabase
+      .from("customer_primary_addresses")
+      .insert({ ...clean, user_id: userId });
+    if (error) throw error;
+  }
+}
 export type CheckoutPreview = {
   items: {
     product_id: string;
@@ -90,45 +131,75 @@ export async function checkoutPreview(
 
 export async function loadDeliveryAddress(userId: string) {
   if (!supabase) throw new Error("Unavailable");
-  const { data, error } = await supabase
-    .from("customer_delivery_addresses")
-    .select(
-      "recipient_name,phone,city,district,khoroo,address_line,instructions",
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) throw error;
-  if (data) return { address: data as DeliveryAddress, saved: true };
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("full_name,phone")
-    .eq("id", userId)
-    .single();
-  if (profileError) throw profileError;
+  const [delivery, primary, profileResult] = await Promise.all([
+    supabase
+      .from("customer_delivery_addresses")
+      .select(
+        "recipient_name,phone,city,district,khoroo,address_line,instructions,address_source",
+      )
+      .eq("user_id", userId)
+      .maybeSingle(),
+    loadPrimaryAddress(userId),
+    supabase
+      .from("profiles")
+      .select("full_name,phone")
+      .eq("id", userId)
+      .single(),
+  ]);
+  if (delivery.error) throw delivery.error;
+  if (profileResult.error) throw profileResult.error;
+  const profile = profileResult.data;
+  const defaults: DeliveryAddress = {
+    recipient_name: profile?.full_name ?? "",
+    phone: profile?.phone ?? "",
+    city: "Ulaanbaatar",
+    district: "",
+    khoroo: 1,
+    address_line: "",
+    instructions: "",
+  };
+  const primaryAddress: DeliveryAddress | null = primary
+    ? {
+        ...primary,
+        recipient_name: defaults.recipient_name,
+        phone: defaults.phone,
+      }
+    : null;
+  const selected = delivery.data;
+  const source: AddressSource =
+    primaryAddress && (!selected || selected.address_source === "primary")
+      ? "primary"
+      : "other";
+  const address: DeliveryAddress =
+    source === "primary"
+      ? {
+          ...primaryAddress!,
+          recipient_name: selected?.recipient_name ?? defaults.recipient_name,
+          phone: selected?.phone ?? defaults.phone,
+        }
+      : (selected ?? defaults);
   return {
-    saved: false,
-    address: {
-      recipient_name: profile?.full_name ?? "",
-      phone: profile?.phone ?? "",
-      city: "Ulaanbaatar" as const,
-      district: "",
-      khoroo: 1,
-      address_line: "",
-      instructions: "",
-    },
+    address,
+    saved: !!selected,
+    primaryAddress,
+    source,
+    otherAddress: source === "other" ? address : defaults,
   };
 }
 
 export async function saveDeliveryAddress(
   userId: string,
   address: DeliveryAddress,
+  source: AddressSource = "other",
 ) {
   if (!supabase) throw new Error("Unavailable");
   const clean = {
-    ...address,
-    city: "Ulaanbaatar",
     recipient_name: address.recipient_name.trim(),
     phone: address.phone.trim(),
+    district: address.district,
+    khoroo: address.khoroo,
+    city: "Ulaanbaatar",
+    address_source: source,
     address_line: address.address_line.trim(),
     instructions: address.instructions.trim(),
   };

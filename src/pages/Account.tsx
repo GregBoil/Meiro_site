@@ -3,6 +3,8 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { supabase } from "../services/supabase";
 
+import PrimaryAddress from "../addresses/PrimaryAddress";
+
 const emailFlowsEnabled = import.meta.env.VITE_AUTH_EMAILS_ENABLED === "true";
 const connectionError = "Холболт амжилтгүй боллоо. Дахин оролдоно уу.";
 type Mode = "login" | "signup" | "forgot-password" | "reset-password";
@@ -457,6 +459,7 @@ function CustomerProfile({ userId, email }: { userId: string; email: string }) {
           )}
         </>
       )}
+      <PrimaryAddress userId={userId} />
       <div className="account-links">
         <Link to="/account/orders">Миний захиалгууд</Link>
         <Link to="/account/reset-password">Нууц үг солих</Link>

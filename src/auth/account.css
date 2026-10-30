@@ -127,3 +127,6 @@
     padding: 24px;
   }
 }
+
+.primary-address { margin-top: 32px; padding-top: 24px; border-top: 1px solid #ded8d3; }
+.primary-address h3 { font-size: 24px; margin-bottom: 12px; }

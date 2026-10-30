@@ -7,6 +7,7 @@ import path from "node:path";
 
 test("saved delivery addresses reload per account; profile defaults remain unsaved and read errors propagate", async () => {
   const addresses = new Map(),
+    primaryAddresses = new Map(),
     profiles = new Map([
       ["a", { full_name: "Client A", phone: "11111111" }],
       ["b", { full_name: "Client B", phone: "22222222" }],
@@ -14,6 +15,8 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
   let readError = false;
   const db = {
     from(table) {
+      const rows =
+        table === "customer_primary_addresses" ? primaryAddresses : addresses;
       let operation = "select",
         payload,
         filter;
@@ -32,9 +35,9 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
         },
         async maybeSingle() {
           if (readError) return { data: null, error: new Error("read failed") };
-          const row = addresses.get(filter);
+          const row = rows.get(filter);
           if (operation === "update" && row)
-            addresses.set(filter, { ...row, ...payload });
+            rows.set(filter, { ...row, ...payload });
           return {
             data:
               operation === "update"
@@ -51,8 +54,13 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
           return { data: profiles.get(filter), error: null };
         },
         async insert(value) {
-          assert.equal(table, "customer_delivery_addresses");
-          addresses.set(value.user_id, { ...value });
+          assert.ok(
+            [
+              "customer_delivery_addresses",
+              "customer_primary_addresses",
+            ].includes(table),
+          );
+          rows.set(value.user_id, { ...value });
           return { error: null };
         },
       };
@@ -63,7 +71,7 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
   const output = await build({
     stdin: {
       contents:
-        "export {loadDeliveryAddress,saveDeliveryAddress} from './src/services/orders.ts';",
+        "export {loadDeliveryAddress,saveDeliveryAddress,loadPrimaryAddress,savePrimaryAddress} from './src/services/orders.ts';",
       resolveDir: process.cwd(),
     },
     bundle: true,
@@ -85,9 +93,12 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
   const file = path.resolve(`.address-test-${process.pid}.mjs`);
   await writeFile(file, output.outputFiles[0].text);
   try {
-    const { loadDeliveryAddress, saveDeliveryAddress } = await import(
-      pathToFileURL(file).href
-    );
+    const {
+      loadDeliveryAddress,
+      saveDeliveryAddress,
+      loadPrimaryAddress,
+      savePrimaryAddress,
+    } = await import(pathToFileURL(file).href);
     let result = await loadDeliveryAddress("a");
     assert.equal(result.saved, false);
     assert.equal(result.address.recipient_name, "Client A");
@@ -116,6 +127,44 @@ test("saved delivery addresses reload per account; profile defaults remain unsav
       "Building 2",
     );
     assert.equal(addresses.size, 1);
+    const primary = {
+      city: "Ulaanbaatar",
+      district: "Хан-Уул",
+      khoroo: 3,
+      address_line: " Home A ",
+      instructions: "",
+    };
+    await savePrimaryAddress("a", primary);
+    assert.equal((await loadPrimaryAddress("a")).address_line, "Home A");
+    // Existing deliveries remain alternative addresses, not silently promoted.
+    assert.equal((await loadDeliveryAddress("a")).source, "other");
+    await saveDeliveryAddress(
+      "a",
+      { ...result.address, ...primary, address_line: "Home A" },
+      "primary",
+    );
+    assert.equal((await loadDeliveryAddress("a")).source, "primary");
+    await savePrimaryAddress("a", { ...primary, address_line: "New Home A" });
+    assert.equal(
+      (await loadDeliveryAddress("a")).address.address_line,
+      "New Home A",
+    );
+    await saveDeliveryAddress(
+      "a",
+      { ...result.address, address_line: "Office A" },
+      "other",
+    );
+    assert.equal(
+      (await loadDeliveryAddress("a")).address.address_line,
+      "Office A",
+    );
+    assert.equal((await loadPrimaryAddress("a")).address_line, "New Home A");
+    assert.equal(await loadPrimaryAddress("b"), null);
+    await savePrimaryAddress("b", { ...primary, address_line: "Home B" });
+    const fresh = await loadDeliveryAddress("b");
+    assert.equal(fresh.source, "primary");
+    assert.equal(fresh.saved, false);
+    assert.equal(fresh.address.address_line, "Home B");
     readError = true;
     await assert.rejects(() => loadDeliveryAddress("a"), /read failed/);
   } finally {
