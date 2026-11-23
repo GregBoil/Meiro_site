@@ -9,6 +9,11 @@ type Form={name:string;slug:string;internal_reference:string;short_description:s
 const empty:Form={name:"",slug:"",internal_reference:"",short_description:"",description:"",material:"",dimensions:"",category_id:"",status:"draft",featured:false,custom_order_available:false,custom_order_note:"",display_order:0};
 const mnMap:Record<string,string>={а:"a",б:"b",в:"v",г:"g",д:"d",е:"ye",ё:"yo",ж:"j",з:"z",и:"i",й:"i",к:"k",л:"l",м:"m",н:"n",о:"o",ө:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ү:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",щ:"sh",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
 const slugify=(s:string)=>s.toLowerCase().split("").map(ch=>mnMap[ch]??ch).join("").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+const validInternalCode = /^(?=.*[A-ZА-ЯЁӨҮ0-9])[A-ZА-ЯЁӨҮ0-9 -]+$/;
+const internalCodeHelp = "Дотоод кодод латин, монгол үсэг, тоо, зураас болон зай ашиглана уу.";
+const productSlug = (code: string) =>
+  slugify(code) || Array.from(code, char => char.codePointAt(0)!.toString(16)).join("-");
+
 
 export default function AdminProductEditor(){
  const {id}=useParams(); const creating=id==="new"; const nav=useNavigate(); const topRef=useRef<HTMLElement|null>(null);
@@ -53,7 +58,7 @@ export default function AdminProductEditor(){
  }
  async function saveVariant(i:number){
    if(!supabase)return;const v=variants[i];if(!v||v._deleted)return;
-   if(!v.name.trim()||!v.sku.trim()||String(v.price).trim()===""||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
+   if(!v.name.trim()||!validInternalCode.test(v.sku.trim().toUpperCase())||String(v.price).trim()===""||Number(v.price)<=0){setVariantErrors(e=>({...e,[i]:"Нэр, хувилбарын дотоод код болон үнийг бүрэн бөглөнө үү."}));return}
    if(productId&&form.internal_reference.trim().toUpperCase()!==originalInternalReference){setVariantErrors(e=>({...e,[i]:"Эхлээд бүтээгдэхүүний шинэ дотоод кодыг хадгална уу."}));return}
    let pid=productId;if(!pid){pid=await ensureDraft();if(!pid)return}
    setSaving(true);setError("");
@@ -65,15 +70,17 @@ export default function AdminProductEditor(){
  async function ensureDraft(){
    if(!supabase)return null;if(productId)return productId;
    if(!form.name.trim()||!form.internal_reference.trim()){setError("Зураг нэмэхийн өмнө нэр болон дотоод кодыг оруулна уу.");return null}
-   const generatedSlug=slugify(form.internal_reference);if(!generatedSlug){setError("Дотоод код оруулна уу.");return null}
-   const payload={...form,status:"draft" as const,slug:generatedSlug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
+   const reference = form.internal_reference.trim().toUpperCase();
+   if (!validInternalCode.test(reference)) { showError(internalCodeHelp); return null; }
+   const generatedSlug = productSlug(reference);
+   const payload={...form,internal_reference:reference,status:"draft" as const,slug:generatedSlug,short_description:form.short_description||null,description:form.description||null,material:form.material||null,dimensions:form.dimensions||null,category_id:form.category_id||null,custom_order_note:form.custom_order_note||null};
    const {data,error}=await supabase.from("products").insert(payload).select("id").single();
    if(error||!data){showError(productErrorMessage(error));return null}
    setProductId(data.id);setForm(x=>({...x,slug:generatedSlug,status:"draft"}));nav("/admin/products/"+data.id,{replace:true});return data.id;
  }
  async function uploadImage(file:File){
    if(!supabase)return; setUploading(true);setError(""); const pid=await ensureDraft();if(!pid){setUploading(false);return}
-   const safe=file.name.toLowerCase().replace(/[^a-z0-9._-]+/g,"-"); const path=`${form.slug||slugify(form.internal_reference)||pid}/${Date.now()}-${safe}`;
+   const safe=file.name.toLowerCase().replace(/[^a-z0-9._-]+/g,"-"); const path=`${form.slug||productSlug(form.internal_reference.trim().toUpperCase())||pid}/${Date.now()}-${safe}`;
    const {error:ue}=await supabase.storage.from("product-images").upload(path,file,{contentType:file.type,upsert:false}); if(ue){setError(ue.message);setUploading(false);return}
    const {data:m,error:me}=await supabase.from("media").insert({storage_path:path,filename:file.name,alt_text:form.name||file.name,mime_type:file.type||null,file_size:file.size}).select("id,storage_path,filename,alt_text").single();
    if(me||!m){await supabase.storage.from("product-images").remove([path]);setError(me?.message||"Зураг хадгалж чадсангүй.");setUploading(false);return}
@@ -131,13 +138,12 @@ export default function AdminProductEditor(){
      const problems=publicationProblems();
      if(problems.length){showError("Нийтлэхийн өмнө дараах мэдээллийг бөглөнө үү: "+problems.join(", ")+".");return}
    }
-   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!/^[A-Z0-9]+$/.test(v.sku.trim().toUpperCase())||String(v.price).trim()===""||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
+   const invalidVariant=variants.find(v=>!v._deleted&&(!v.name.trim()||!validInternalCode.test(v.sku.trim().toUpperCase())||String(v.price).trim()===""||!Number.isInteger(Number(v.price))||Number(v.price)<0||(v.active&&form.status==="published"&&Number(v.price)<=0)));
    if(invalidVariant){showError("Хувилбар бүрийн нэр, дотоод код болон үнийг шалгана уу. Нийтлэх хувилбарын үнэ 0-ээс их байх ёстой.");return}
    if(variants.some(v=>v._deleted)){showError("Устгах хувилбарыг эхлээд тусад нь устгана уу.");return}
    const newRef=form.internal_reference.trim().toUpperCase();
-   if(!/^[A-Z0-9]+$/.test(newRef)){showError("Бүтээгдэхүүний дотоод код зөвхөн латин том үсэг болон тоо агуулна.");return}
-   const generatedSlug=slugify(newRef);
-   if(!generatedSlug){showError("Дотоод код оруулна уу.");return}
+   if(!validInternalCode.test(newRef)){showError(internalCodeHelp);return}
+   const generatedSlug=productSlug(newRef);
    setSaving(true);
    try{
      const payload={...form,internal_reference:newRef,slug:productId?form.slug:generatedSlug,
@@ -197,7 +203,7 @@ export default function AdminProductEditor(){
  {error&&<p className="admin-error admin-message">{error}</p>}{saved&&<p className="admin-success admin-message">Өөрчлөлт хадгалагдлаа.</p>}
  <form id="product-form" className="admin-editor" onSubmit={save}>
   <section className="admin-panel"><h2>Үндсэн мэдээлэл</h2><div className="admin-fields">
-   <div className="admin-name-code-row"><label>Нэр<input value={form.name} onChange={e=>set("name",e.target.value)} required /></label><label>Дотоод код<input value={form.internal_reference} onChange={e=>set("internal_reference",e.target.value.toUpperCase())} placeholder="Жишээ: NHG" required /></label></div>
+   <div className="admin-name-code-row"><label>Нэр<input value={form.name} onChange={e=>set("name",e.target.value)} required /></label><label>Дотоод код<input value={form.internal_reference} onChange={e=>set("internal_reference",e.target.value.toUpperCase())} placeholder="Жишээ: АРЬС-01 УБ" required /></label></div>
    <div className="admin-category-field wide"><label>Ангилал<select value={form.category_id} onChange={e=>set("category_id",e.target.value)}><option value="">—</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><div className="admin-inline-add"><input aria-label="Шинэ ангилал" placeholder="Шинэ ангилал…" value={newCategory} onChange={e=>setNewCategory(e.target.value)} /><button type="button" onClick={addCategory} disabled={addingCategory||!newCategory.trim()}>{addingCategory?"…":"+ Нэмэх"}</button></div></div>
    <label className="wide">Товч тайлбар<textarea value={form.short_description} onChange={e=>set("short_description",e.target.value)} rows={2}/></label>
    <label className="wide">Дэлгэрэнгүй тайлбар<textarea value={form.description} onChange={e=>set("description",e.target.value)} rows={5}/></label>
@@ -206,7 +212,7 @@ export default function AdminProductEditor(){
   <section className="admin-panel admin-variants-panel"><div className="admin-section-head"><div><h2>Хувилбарууд</h2><p>Хувилбар, үнэ болон дотоод кодыг энд удирдана.</p></div></div>
    <div className="admin-variants">{variants.map((v,i)=>v._deleted?null:<div className="admin-variant" key={v.id??i}>
     <div className="admin-variant-top"><div><strong>{v.name||"Шинэ хувилбар"}{form.internal_reference&&v.sku&&<span className="admin-variant-title-code"> · {form.internal_reference.toUpperCase()}-{v.sku}</span>}</strong>{!v.id&&<span className="admin-draft-badge">Ноорог</span>}</div><div className="admin-variant-actions"><button type="button" className="admin-secondary" disabled={saving} onClick={()=>saveVariant(i)}>Хадгалах</button><button type="button" onClick={()=>removeVariant(i)}>Устгах</button></div></div>
-    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"")})} placeholder="Жишээ: BLU" required/></label><label>Үнэ (₮)<input type="text" inputMode="numeric" pattern="[0-9]*" value={v.price} onChange={e=>{const value=e.target.value;if(/^\d*$/.test(value))updateVariant(i,{price:value})}} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
+    <div className="admin-variant-grid"><label>Хувилбарын нэр<input value={v.name} onChange={e=>updateVariant(i,{name:e.target.value})} placeholder="Жишээ: Хөх, Том, Зүүн"/></label><label>Хувилбарын дотоод код<input value={v.sku} onChange={e=>updateVariant(i,{sku:e.target.value.toUpperCase()})} placeholder="Жишээ: ХӨХ-02" required/></label><label>Үнэ (₮)<input type="text" inputMode="numeric" pattern="[0-9]*" value={v.price} onChange={e=>{const value=e.target.value;if(/^\d*$/.test(value))updateVariant(i,{price:value})}} required/></label></div>{variantErrors[i]&&<div className="admin-variant-error">{variantErrors[i]}</div>}
     <div className="admin-variant-options"><label className="admin-check"><input type="checkbox" checked={v.active} onChange={e=>updateVariant(i,{active:e.target.checked})}/> Идэвхтэй</label><label className="admin-check"><input type="checkbox" checked={v.made_to_order} onChange={e=>updateVariant(i,{made_to_order:e.target.checked})}/> Захиалгаар хийх</label>{v.made_to_order&&<label>Хийх хугацаа (хоног)<input type="number" min="1" value={v.lead_time_days??""} onChange={e=>updateVariant(i,{lead_time_days:e.target.value?Number(e.target.value):null})}/></label>}</div>
    </div>)}</div>{variants.filter(v=>!v._deleted).length===0&&<p className="admin-empty">Хувилбар нэмээгүй байна.</p>}<button type="button" className="admin-secondary admin-add-variant-bottom" onClick={addVariant}>+ Хувилбар нэмэх</button>
   </section>
