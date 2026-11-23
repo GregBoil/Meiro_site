@@ -1624,3 +1624,12 @@ p {
 .admin-variant-title-code{font-family:inherit;font-size:.58em;font-weight:500;color:#8a7972;letter-spacing:.04em;vertical-align:middle}
 
 .admin-add-variant-bottom{margin-top:14px}
+
+.carousel-track figure > a {
+  display: block;
+}
+
+.carousel-track figure > a > .carousel-media-image {
+  height: auto;
+  aspect-ratio: 1.08 / 1;
+}

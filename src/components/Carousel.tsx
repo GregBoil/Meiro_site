@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
+import { Link } from "react-router-dom";
 import ImagePlaceholder from "./ImagePlaceholder";
 import { supabase } from "../services/supabase";
 
@@ -36,6 +37,16 @@ const slides = [
   },
 ];
 
+type CarouselRow = {
+  id: string;
+  object_position: string;
+  product_image_id: string | null;
+  media: { storage_path: string; alt_text: string | null } | null;
+  product_image: {
+    product: { name: string; slug: string; status: string } | null;
+  } | null;
+};
+
 export default function Carousel() {
   const track = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(
@@ -45,14 +56,58 @@ export default function Carousel() {
   );
   const [interacting, setInteracting] = useState(false);
   const [active, setActive] = useState(0);
-  const [mediaSlides, setMediaSlides] = useState<{id:string;url:string;alt:string;objectPosition:string}[]>([]);
+  const [mediaSlides, setMediaSlides] = useState<
+    {
+      id: string;
+      url: string;
+      alt: string;
+      title: string;
+      objectPosition: string;
+      href: string | null;
+    }[]
+  >([]);
 
   useEffect(() => {
-    if (!supabase) return;
-    supabase.from("homepage_carousel").select("id,display_order,object_position,media(storage_path,alt_text)").eq("active",true).order("display_order").then(({data,error})=>{
-      if(error){console.error(error);return}
-      setMediaSlides(((data??[]) as any[]).filter(x=>x.media?.storage_path).map(x=>({id:x.id,url:supabase!.storage.from("product-images").getPublicUrl(x.media.storage_path).data.publicUrl,alt:x.media.alt_text||"Meiro",objectPosition:x.object_position||"center center"})));
-    });
+    const client = supabase;
+    if (!client) return;
+    client
+      .from("homepage_carousel")
+      .select(
+        "id,object_position,product_image_id,media(storage_path,alt_text),product_image:product_images!homepage_carousel_product_image_fkey(product:products(name,slug,status))",
+      )
+      .eq("active", true)
+      .order("display_order")
+      .order("id")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error(error);
+          return;
+        }
+        setMediaSlides(
+          ((data ?? []) as unknown as CarouselRow[]).flatMap((row) => {
+            const product = row.product_image?.product;
+            if (
+              !row.media?.storage_path ||
+              (row.product_image_id && product?.status !== "published")
+            )
+              return [];
+            return [
+              {
+                id: row.id,
+                url: client.storage
+                  .from("product-images")
+                  .getPublicUrl(row.media.storage_path).data.publicUrl,
+                alt: row.media.alt_text || product?.name || "Meiro",
+                title: product?.name || row.media.alt_text || "Meiro",
+                objectPosition: row.object_position || "center center",
+                href: product
+                  ? "/catalogue/" + encodeURIComponent(product.slug)
+                  : null,
+              },
+            ];
+          }),
+        );
+      });
   }, []);
 
   useEffect(() => {
@@ -91,7 +146,10 @@ export default function Carousel() {
         <p className="eyebrow">ОЙРООС ХАРВАЛ</p>
         <div className="carousel-controls">
           <span className="slide-count">
-            0{active + 1} <span>/ {String(mediaSlides.length||slides.length).padStart(2,"0")}</span>
+            0{active + 1}{" "}
+            <span>
+              / {String(mediaSlides.length || slides.length).padStart(2, "0")}
+            </span>
           </span>
           <button
             className="icon-button"
@@ -142,26 +200,62 @@ export default function Carousel() {
             element &&
             element.scrollLeft >= element.scrollWidth - element.clientWidth - 4
           ) {
-            setActive((mediaSlides.length||slides.length) - 1);
+            setActive((mediaSlides.length || slides.length) - 1);
             return;
           }
           setActive(
             Math.min(
-              (mediaSlides.length||slides.length) - 1,
+              (mediaSlides.length || slides.length) - 1,
               Math.round((element?.scrollLeft ?? 0) / (width + 24)),
             ),
           );
         }}
       >
-        {(mediaSlides.length ? mediaSlides : slides).map((slide:any, index) => (
-          <figure key={slide.id||slide.title}>
-            {mediaSlides.length ? <img className="carousel-media-image" src={slide.url} alt={slide.alt} style={{objectPosition:slide.objectPosition}}/> : <ImagePlaceholder description={slide.description} tone={slide.tone} number={`0${index + 1}`}/>}
-            <figcaption>
-              <span>{mediaSlides.length ? slide.alt : slide.title}</span>
-              <span>0{index + 1}</span>
-            </figcaption>
-          </figure>
-        ))}
+        {mediaSlides.length
+          ? mediaSlides.map((slide, index) => {
+              const image = (
+                <img
+                  className="carousel-media-image"
+                  src={slide.url}
+                  alt={slide.alt}
+                  style={{ objectPosition: slide.objectPosition }}
+                />
+              );
+              return (
+                <figure key={slide.id}>
+                  {slide.href ? (
+                    <Link to={slide.href} aria-label={slide.title}>
+                      {image}
+                    </Link>
+                  ) : (
+                    image
+                  )}
+                  <figcaption>
+                    <span>
+                      {slide.href ? (
+                        <Link to={slide.href}>{slide.title}</Link>
+                      ) : (
+                        slide.title
+                      )}
+                    </span>
+                    <span>0{index + 1}</span>
+                  </figcaption>
+                </figure>
+              );
+            })
+          : slides.map((slide, index) => (
+              <figure key={slide.title}>
+                <ImagePlaceholder
+                  description={slide.description}
+                  tone={slide.tone}
+                  number={`0${index + 1}`}
+                />
+                <figcaption>
+                  <span>{slide.title}</span>
+                  <span>0{index + 1}</span>
+                </figcaption>
+              </figure>
+            ))}
       </div>
     </div>
   );
