@@ -9,8 +9,8 @@ type Form={name:string;slug:string;internal_reference:string;short_description:s
 const empty:Form={name:"",slug:"",internal_reference:"",short_description:"",description:"",material:"",dimensions:"",category_id:"",status:"draft",featured:false,custom_order_available:false,custom_order_note:"",display_order:0};
 const mnMap:Record<string,string>={а:"a",б:"b",в:"v",г:"g",д:"d",е:"ye",ё:"yo",ж:"j",з:"z",и:"i",й:"i",к:"k",л:"l",м:"m",н:"n",о:"o",ө:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ү:"u",ф:"f",х:"kh",ц:"ts",ч:"ch",ш:"sh",щ:"sh",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
 const slugify=(s:string)=>s.toLowerCase().split("").map(ch=>mnMap[ch]??ch).join("").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
-const validInternalCode = /^(?=.*[A-ZА-ЯЁӨҮ0-9])[A-ZА-ЯЁӨҮ0-9 -]+$/;
-const internalCodeHelp = "Дотоод кодод латин, монгол үсэг, тоо, зураас болон зай ашиглана уу.";
+const validInternalCode = /^(?=.*[A-ZА-ЯЁӨҮ0-9])[A-ZА-ЯЁӨҮ0-9 /-]+$/;
+const internalCodeHelp = "Дотоод кодод латин, монгол үсэг, тоо, зураас (-), ташуу зураас (/) болон зай ашиглана уу.";
 function variantValidationError(variant: Variant, requirePositivePrice: boolean) {
   if (!variant.name.trim()) return "Хувилбарын нэрийг оруулна уу.";
   if (!validInternalCode.test(variant.sku.trim().toUpperCase())) return internalCodeHelp;
