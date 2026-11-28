@@ -1,9 +1,15 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { contentSecurityPolicy, publicConfiguration } from "./build/security";
 
 export default defineConfig(({ mode }) => {
-  const env = publicConfiguration(loadEnv(mode, process.cwd(), "VITE_"));
+  // This development branch must never connect to the production database.
+  const env = publicConfiguration({
+    VITE_SUPABASE_URL: "https://uiszpsemvkneeykhonzj.supabase.co",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_uZQ8dy8i4HUvhtUm3o5nyg_gI_iZ_b_",
+    VITE_AUTH_EMAILS_ENABLED: "false",
+    VITE_CONTACT_ENDPOINT: "",
+  });
   return {
     plugins: [
       react(),
