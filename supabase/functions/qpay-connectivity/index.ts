@@ -3,11 +3,14 @@ Deno.serve(async (req) => {
  const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
  if(req.method!=="POST") return reply({error:"Method not allowed"},405);
  const auth=req.headers.get("Authorization")??"";
+ const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+ if (!(serviceKey && auth === "Bearer "+serviceKey)) {
  const client=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:auth}}});
  const {data,error}=await client.auth.getUser();
  if(error||!data.user) return reply({error:"Unauthorized"},401);
  const {data:allowed,error:checkError}=await client.rpc("is_meiro_admin");
  if(checkError||allowed!==true) return reply({error:"Forbidden"},403);
+ }
  const key=Deno.env.get("QPAY_API_KEY");
  if(!key) return reply({error:"QPAY_API_KEY not configured"},503);
  try {
