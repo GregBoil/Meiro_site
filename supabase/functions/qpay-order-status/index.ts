@@ -1,6 +1,7 @@
 import {createClient} from "npm:@supabase/supabase-js@2.49.4";
 Deno.serve(async req=>{
-const headers={"Content-Type":"application/json","Cache-Control":"no-store"};
+const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS"};
+if(req.method==="OPTIONS")return new Response(null,{headers});
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers});
 if(req.method!=="POST")return reply({error:"method_not_allowed"},405);
 const token=req.headers.get("Authorization")?.match(/^Bearer (.+)$/i)?.[1];
