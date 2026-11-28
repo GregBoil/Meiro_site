@@ -29,6 +29,31 @@ export default function Checkout() {
 function CheckoutForm({ userId }: { userId: string }) {
   const { items, remove } = useCart();
   const paymentLock = useRef(false);
+  const realMode = import.meta.env.VITE_QPAY_TEST_MODE === "true";
+  type QPayment = {invoice_id: string | null; amount_mnt: number; status: string; qr_image: string | null; payment_url: string | null};
+  const [qpay, setQpay] = useState<{order_id: string; payment: QPayment | null} | null>(null);
+  const [restoring, setRestoring] = useState(realMode);
+  const [restoreFailed, setRestoreFailed] = useState(false);
+  const [restoreRetry, setRestoreRetry] = useState(0);
+  useEffect(() => {
+    if (!realMode || !supabase) return;
+    let active = true;
+    const db = supabase;
+    setRestoring(true); setRestoreFailed(false);
+    void (async () => {
+      try {
+        const {data,error} = await db.from("orders").select("id").eq("user_id",userId).eq("payment_provider","qpay").eq("status","pending_payment").order("created_at",{ascending:false}).limit(1).maybeSingle();
+        if(error) throw error;
+        if(data) {
+          const result = await db.functions.invoke("qpay-order-status",{body:{order_id:data.id}});
+          if(result.error) throw result.error;
+          if(active) setQpay({order_id:data.id,payment:result.data.payment});
+        }
+      } catch {if(active) setRestoreFailed(true);}
+      finally {if(active) setRestoring(false);}
+    })();
+    return ()=>{active=false;};
+  },[realMode,userId,restoreRetry]);
   const checkoutKey = useRef<string | null>(null);
   const [payment, setPayment] = useState<{id: string; total_mnt: number; status: string; reservation_expires_at: string} | null>(null);
   const [paymentBusy, setPaymentBusy] = useState(false);
@@ -182,6 +207,12 @@ function CheckoutForm({ userId }: { userId: string }) {
     setPaymentError(false);
     try {
       checkoutKey.current ??= crypto.randomUUID();
+      if(realMode) {
+        const result = await supabase.functions.invoke("qpay-create-invoice",{body:{checkout_key:checkoutKey.current,items,address}});
+        if(result.error) {setRestoreFailed(true); throw result.error;}
+        setQpay(result.data);
+        return;
+      }
       const { data: id, error } = await supabase.rpc("meiro_create_mock_order", {p_items: items, p_address: address, p_key: checkoutKey.current});
       if (error) throw error;
       const result = await supabase.from("orders").select("id,total_mnt,status,reservation_expires_at").eq("id", id).single();
@@ -202,6 +233,33 @@ function CheckoutForm({ userId }: { userId: string }) {
       if (data === "paid") items.forEach(remove);
     } catch { setPaymentError(true); }
     finally { paymentLock.current = false; setPaymentBusy(false); }
+  }
+  async function refreshQpay() {
+    if(!supabase || !qpay || paymentLock.current) return;
+    paymentLock.current=true; setPaymentBusy(true); setPaymentError(false);
+    try {
+      const result=await supabase.functions.invoke("qpay-order-status",{body:{order_id:qpay.order_id}});
+      if(result.error) throw result.error;
+      setQpay({...qpay,payment:result.data.payment});
+    } catch {setPaymentError(true);}
+    finally {paymentLock.current=false;setPaymentBusy(false);}
+  }
+  if(realMode && (restoring || restoreFailed)) return <section className="page-shell checkout-page"><h1>QPay</h1><p role="status">{restoring?"Захиалгыг шалгаж байна…":"Захиалгыг шалгаж чадсангүй."}</p>{restoreFailed && <button className="button account-secondary" onClick={()=>setRestoreRetry(v=>v+1)}>Дахин шалгах</button>}</section>;
+  if(qpay) {
+    const p=qpay.payment;
+    const raw=p?.qr_image?.replace(/^data:image\/png;base64,/,"") ?? "";
+    const qr=/^[A-Za-z0-9+/]+={0,2}$/.test(raw)&&raw.startsWith("iVBOR")?"data:image/png;base64,"+raw:null;
+    return <section className="page-shell checkout-page"><p className="eyebrow">MEIRO · STAGING</p><h1>QPay төлбөр</h1><div className="account-card">
+      <p>Захиалга: {qpay.order_id}</p>
+      {p && <p>Нийт төлөх: {formatPrice(p.amount_mnt)}</p>}
+      <p role="status">{p?.status==="paid"?"Төлбөр баталгаажлаа":p?.status==="pending"?"Төлбөр хүлээгдэж байна":"Төлбөрийн мэдээллийг шалгаж байна"}</p>
+      {p?.status==="pending" && qr && <img src={qr} alt="QPay QR код" width={240} height={240}/>}
+      {p?.status==="pending" && p.payment_url?.startsWith("https://") && <a className="button button-primary" href={p.payment_url} target="_blank" rel="noopener noreferrer">Төлбөр төлөх</a>}
+      <button className="button account-secondary" disabled={paymentBusy} onClick={refreshQpay}>Төлөв шинэчлэх</button>
+      {paymentError && <p role="alert">Төлөв шалгаж чадсангүй.</p>}
+      <p>Төлбөрийн төлөв тодорхойгүй бол дахин төлбөр хийхгүй байна уу.</p>
+      <Link to="/account">Миний бүртгэл</Link>
+    </div></section>;
   }
   if (payment) return (
     <section className="page-shell cart-page checkout-page">
@@ -545,7 +603,7 @@ function CheckoutForm({ userId }: { userId: string }) {
           )}
           {reviewing && (
             <>
-              <p>STAGING — Туршилтын төлбөр</p>
+              <p>STAGING — {realMode ? "QPay" : "Туршилтын төлбөр"}</p>
               {paymentError && <p role="alert">Захиалга үүсгэж чадсангүй. Дахин оролдоно уу.</p>}
               <button className="button button-primary" disabled={paymentBusy || busy || loading || !saved || !preview?.all_items_available || preview.total_mnt == null} onClick={startPayment} type="button">
                 Баталгаажуулаад төлбөр төлөх
