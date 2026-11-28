@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { useCart } from "../commerce/CartProvider";
 import RequireUser from "../components/RequireUser";
+import { supabase } from "../services/supabase";
 import { formatPrice } from "../data/products";
 import {
   checkoutPreview,
@@ -26,7 +27,12 @@ export default function Checkout() {
 }
 
 function CheckoutForm({ userId }: { userId: string }) {
-  const { items } = useCart();
+  const { items, remove } = useCart();
+  const paymentLock = useRef(false);
+  const checkoutKey = useRef<string | null>(null);
+  const [payment, setPayment] = useState<{id: string; total_mnt: number; status: string; reservation_expires_at: string} | null>(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState(false);
   const [address, setAddress] = useState<DeliveryAddress>({
     recipient_name: "",
     phone: "",
@@ -169,6 +175,55 @@ function CheckoutForm({ userId }: { userId: string }) {
       setBusy(false);
     }
   }
+  async function startPayment() {
+    if (!supabase || paymentLock.current || !saved || !preview?.all_items_available || preview.total_mnt == null) return;
+    paymentLock.current = true;
+    setPaymentBusy(true);
+    setPaymentError(false);
+    try {
+      checkoutKey.current ??= crypto.randomUUID();
+      const { data: id, error } = await supabase.rpc("meiro_create_mock_order", {p_items: items, p_address: address, p_key: checkoutKey.current});
+      if (error) throw error;
+      const result = await supabase.from("orders").select("id,total_mnt,status,reservation_expires_at").eq("id", id).single();
+      if (result.error) throw result.error;
+      setPayment(result.data);
+    } catch { setPaymentError(true); }
+    finally { paymentLock.current = false; setPaymentBusy(false); }
+  }
+  async function finishPayment(action: "paid" | "cancelled" | "expired") {
+    if (!supabase || !payment || paymentLock.current) return;
+    paymentLock.current = true;
+    setPaymentBusy(true);
+    setPaymentError(false);
+    try {
+      const {data, error} = await supabase.rpc("meiro_finish_mock_order", {p_order: payment.id, p_action: action});
+      if (error) throw error;
+      setPayment({...payment, status: data});
+      if (data === "paid") items.forEach(remove);
+    } catch { setPaymentError(true); }
+    finally { paymentLock.current = false; setPaymentBusy(false); }
+  }
+  if (payment) return (
+    <section className="page-shell cart-page checkout-page">
+      <p className="eyebrow">MEIRO · STAGING</p>
+      <h1>Туршилтын төлбөр</h1>
+      <p>Зөвхөн туршилт. Бодит төлбөр хийхгүй.</p>
+      <div className="account-card">
+        <p>Нийт төлөх: {formatPrice(payment.total_mnt)}</p>
+        <p>Захиалга: {payment.id}</p>
+        <p>Төлөв: {payment.status}</p>
+        {payment.status === "pending_payment" && <>
+          <p>Дуусах хугацаа: {new Date(payment.reservation_expires_at).toLocaleTimeString()}</p>
+          <button className="button button-primary" disabled={paymentBusy} onClick={() => finishPayment("paid")}>Төлбөр төлснийг дуурайлгах</button>
+          <button className="button account-secondary" disabled={paymentBusy} onClick={() => finishPayment("cancelled")}>Цуцлах</button>
+          <button className="button account-secondary" disabled={paymentBusy} onClick={() => finishPayment("expired")}>Хугацаа шалгах</button>
+        </>}
+        {paymentError && <p role="alert">Үйлдэл амжилтгүй. Дахин оролдоно уу.</p>}
+        <Link to="/account/orders">Миний захиалгууд →</Link>
+        {payment.status !== "pending_payment" && payment.status !== "paid" && <button className="button account-secondary" onClick={() => {setPayment(null); checkoutKey.current=null; setRetry(v=>v+1);}}>Дахин захиалах</button>}
+      </div>
+    </section>
+  );
   if (!items.length)
     return (
       <section className="page-shell cart-page">
@@ -490,8 +545,9 @@ function CheckoutForm({ userId }: { userId: string }) {
           )}
           {reviewing && (
             <>
-              <p>Захиалга, төлбөрийн үйлчилгээ удахгүй нээгдэнэ.</p>
-              <button className="button button-primary" disabled type="button">
+              <p>STAGING — Туршилтын төлбөр</p>
+              {paymentError && <p role="alert">Захиалга үүсгэж чадсангүй. Дахин оролдоно уу.</p>}
+              <button className="button button-primary" disabled={paymentBusy || busy || loading || !saved || !preview?.all_items_available || preview.total_mnt == null} onClick={startPayment} type="button">
                 Баталгаажуулаад төлбөр төлөх
               </button>
             </>
